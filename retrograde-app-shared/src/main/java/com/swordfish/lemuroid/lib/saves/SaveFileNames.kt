@@ -13,7 +13,15 @@ object SaveFileNames {
      * This name should make it compatible with RetroArch so that users can freely sync saves across
      * the two application.
      */
-    fun saveRam(game: Game) = "${game.baseName()}.$SRM_EXTENSION"
+    fun saveRam(game: Game) = saveRam(game.fileName)
+
+    /**
+     * The save file belonging to a rom, addressed by file name rather than by [Game].
+     *
+     * Needed by anything working backwards from a path, which has the rom's file name but not the
+     * library row behind it.
+     */
+    fun saveRam(romFileName: String) = "${romFileName.substringBeforeLast(".")}.$SRM_EXTENSION"
 
     /**
      * Saves written by older versions, still read as a fallback whenever the current one is missing.
@@ -22,7 +30,22 @@ object SaveFileNames {
      */
     fun legacySaveRams(game: Game) = LEGACY_SAVE_EXTENSIONS.map { "${game.baseName()}.$it" }
 
-    fun autoSaveState(game: Game) = "${game.fileName}.state"
+    fun autoSaveState(game: Game) = "${game.fileName}.$STATE_EXTENSION"
+
+    /**
+     * The rom an auto-save state belongs to, or null when [stateFileName] names something else.
+     *
+     * This is [autoSaveState] read backwards, and it is what lets a state be paired up with the save
+     * file of the same game. Save slots and the metadata sidecars deliberately answer null: only the
+     * auto-save is written by the same session as the save file, so only it can be reasoned about
+     * alongside one.
+     */
+    fun romFileNameForAutoSaveState(stateFileName: String): String? =
+        if (stateFileName.endsWith(".$STATE_EXTENSION")) {
+            stateFileName.removeSuffix(".$STATE_EXTENSION")
+        } else {
+            null
+        }
 
     fun slotState(
         game: Game,
@@ -39,6 +62,7 @@ object SaveFileNames {
     private fun Game.baseName() = fileName.substringBeforeLast(".")
 
     private const val SRM_EXTENSION = "srm"
+    private const val STATE_EXTENSION = "state"
 
     /** DeSmuME wrote ".dsv" saves, while melonDS used to write raw ".sav" ones. */
     private val LEGACY_SAVE_EXTENSIONS = listOf("dsv", "sav")

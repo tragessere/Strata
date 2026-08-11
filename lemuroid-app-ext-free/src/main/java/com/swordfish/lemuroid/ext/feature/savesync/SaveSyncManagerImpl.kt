@@ -7,6 +7,7 @@ import com.swordfish.lemuroid.lib.savesync.ConflictResolution
 import com.swordfish.lemuroid.lib.savesync.SaveSyncConflict
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
 import com.swordfish.lemuroid.lib.savesync.SaveSyncResult
+import com.swordfish.lemuroid.lib.savesync.SyncInstalledSavesStore
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 class SaveSyncManagerImpl(
     private val appContext: Context,
     private val directoriesManager: DirectoriesManager,
+    // Never written to without a sync to install anything, and kept only to match the signature the
+    // application module constructs both flavours with.
+    private val syncInstalledSaves: SyncInstalledSavesStore,
 ) : SaveSyncManager() {
     override fun getProvider(): String = ""
 

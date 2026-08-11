@@ -124,16 +124,12 @@ private fun ResolutionOption(
     }
 }
 
-/** What kind of save a group holds, e.g. "Auto save" or "Slot 2". */
+/** What kind of save a group holds, e.g. "Save data" or "Slot 2". */
 @Composable
 fun saveSyncConflictKindLabel(group: SaveSyncConflictGroup): String =
     when (group.kind) {
         SaveSyncConflictGroup.Kind.SAVE_DATA -> {
             stringResource(id = R.string.save_sync_conflicts_kind_save_data)
-        }
-
-        SaveSyncConflictGroup.Kind.AUTO_SAVE -> {
-            stringResource(id = R.string.save_sync_conflicts_kind_auto_save)
         }
 
         SaveSyncConflictGroup.Kind.SLOT -> {

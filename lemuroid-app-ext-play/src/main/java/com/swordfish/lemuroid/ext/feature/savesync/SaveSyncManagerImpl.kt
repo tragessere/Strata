@@ -12,12 +12,14 @@ import com.swordfish.lemuroid.common.kotlin.calculateMd5
 import com.swordfish.lemuroid.ext.R
 import com.swordfish.lemuroid.lib.library.CoreID
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
+import com.swordfish.lemuroid.lib.saves.SaveFileNames
 import com.swordfish.lemuroid.lib.savesync.ConflictResolution
 import com.swordfish.lemuroid.lib.savesync.SaveSyncConflict
 import com.swordfish.lemuroid.lib.savesync.SaveSyncConflictStore
 import com.swordfish.lemuroid.lib.savesync.SaveSyncFolders
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
 import com.swordfish.lemuroid.lib.savesync.SaveSyncResult
+import com.swordfish.lemuroid.lib.savesync.SyncInstalledSavesStore
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +33,7 @@ private typealias DriveFile = com.google.api.services.drive.model.File
 class SaveSyncManagerImpl(
     private val appContext: Context,
     private val directoriesManager: DirectoriesManager,
+    private val syncInstalledSaves: SyncInstalledSavesStore,
 ) : SaveSyncManager() {
     private var lastSyncTimestamp: Long by SharedPreferencesDelegates.LongDelegate(
         SharedPreferencesHelper.getSharedPreferences(appContext),
@@ -94,14 +97,17 @@ class SaveSyncManagerImpl(
 
         val conflicts = mutableListOf<SaveSyncConflict>()
 
-        conflicts +=
+        val savesDirectory = directoriesManager.getSavesDirectory()
+        val savesOutcome =
             syncLocalAndRemoteFolder(
                 drive,
                 remote,
                 SAVES_FOLDER,
-                directoriesManager.getSavesDirectory(),
+                savesDirectory,
                 null,
-            ).conflicts
+            )
+        conflicts += savesOutcome.conflicts
+        recordInstalledSaves(savesDirectory, savesOutcome.locallyChangedPaths)
 
         // Custom artwork rides along with the saves. It is small, and a cover the user picked is
         // just as much theirs as a save is.
@@ -123,14 +129,17 @@ class SaveSyncManagerImpl(
         if (cores.isNotEmpty()) {
             val corePrefixes = cores.map { it.coreName }.toSet()
 
-            conflicts +=
+            val statesOutcome =
                 syncLocalAndRemoteFolder(
                     drive,
                     remote,
                     STATES_FOLDER,
                     directoriesManager.getStatesDirectory(),
                     corePrefixes,
-                ).conflicts
+                )
+            conflicts += statesOutcome.conflicts
+            forgetSavesPairedWithStates(statesOutcome.locallyChangedPaths)
+
             conflicts +=
                 syncLocalAndRemoteFolder(
                     drive,
@@ -144,6 +153,58 @@ class SaveSyncManagerImpl(
         lastSyncTimestamp = System.currentTimeMillis()
         Timber.i("Save sync took ${lastSyncTimestamp - startedAt}ms, ${conflicts.size} conflicts pending")
         return SaveSyncResult(changedCovers, conflicts)
+    }
+
+    /**
+     * Notes the saves this sync replaced with the remote copy, so that a launch can tell them apart
+     * from a save the last session wrote here. See [SyncInstalledSavesStore] for why the difference
+     * cannot be read off the files themselves.
+     *
+     * Recorded after the write rather than from what was downloaded, since the size and time the file
+     * ends up with on disk is what a launch will be comparing against.
+     */
+    private fun recordInstalledSaves(
+        savesDirectory: File,
+        changedPaths: Set<String>,
+    ) {
+        if (changedPaths.isEmpty()) return
+
+        val installed = mutableMapOf<String, SyncInstalledSavesStore.Installed>()
+        val forgotten = mutableSetOf<String>()
+
+        changedPaths.forEach { relativePath ->
+            val localFile = File(savesDirectory, relativePath)
+
+            // A path is also reported here when the sync removed it to follow a remote deletion, and a
+            // save which is gone has no origin left worth remembering.
+            if (localFile.isFile) {
+                installed[relativePath] =
+                    SyncInstalledSavesStore.Installed(localFile.length(), localFile.lastModified())
+            } else {
+                forgotten += relativePath
+            }
+        }
+
+        syncInstalledSaves.update(installed, forgotten)
+    }
+
+    /**
+     * Drops the notes made by [recordInstalledSaves] for saves whose auto-save this same sync also
+     * replaced.
+     *
+     * Both copies then came from the remote, which makes the state the continuation of the save after
+     * all, and a launch should resume into it exactly as it would have before any of this.
+     */
+    private fun forgetSavesPairedWithStates(changedPaths: Set<String>) {
+        val forgotten =
+            changedPaths
+                .mapNotNull { relativePath ->
+                    // States are stored per core, so the file name sits behind a core directory.
+                    val fileName = relativePath.substringAfterLast('/')
+                    SaveFileNames.romFileNameForAutoSaveState(fileName)?.let { SaveFileNames.saveRam(it) }
+                }.toSet()
+
+        syncInstalledSaves.update(emptyMap(), forgotten)
     }
 
     override fun pendingConflicts(): StateFlow<List<SaveSyncConflict>> = conflictStore.observeConflicts()

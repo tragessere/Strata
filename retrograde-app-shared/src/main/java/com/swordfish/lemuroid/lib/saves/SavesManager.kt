@@ -53,7 +53,7 @@ class SavesManager(
         withContext(Dispatchers.IO) {
             val saveFile = getSaveFile(getSaveRAMFileName(game))
             val fileExists = saveFile.exists() && saveFile.length() > 0
-            SaveInfo(fileExists, saveFile.lastModified())
+            SaveInfo(fileExists, saveFile.lastModified(), saveFile.length())
         }
 
     private suspend fun getSaveFile(fileName: String): File =

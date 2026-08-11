@@ -1,6 +1,7 @@
 package com.swordfish.lemuroid.app.mobile.feature.settings.savesync
 
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.saves.SaveFileNames
 import com.swordfish.lemuroid.lib.savesync.SaveSyncConflict
 import com.swordfish.lemuroid.lib.savesync.SaveSyncFolders
 
@@ -10,6 +11,12 @@ import com.swordfish.lemuroid.lib.savesync.SaveSyncFolders
  * A savestate is up to three synced paths (the state, its metadata sidecar and its preview image),
  * and they only make sense kept together. Asking three times about one save would be both confusing
  * and a way to end up with a state whose preview belongs to a different moment.
+ *
+ * A game's save file and its auto-save are grouped together for the same reason, even though they
+ * live in different synced folders. They are written by the same session and only describe the same
+ * moment as a pair, so answering them separately is how a save from one device ends up carrying the
+ * resume point of another. Save slots stay on their own: those are moments the user picked out
+ * deliberately, and each is worth a separate answer.
  */
 data class SaveSyncConflictGroup(
     val id: String,
@@ -24,8 +31,8 @@ data class SaveSyncConflictGroup(
     val slotNumber: Int?,
 ) {
     enum class Kind {
+        /** A game's ongoing progress: its save file, its auto-save, or both together. */
         SAVE_DATA,
-        AUTO_SAVE,
         SLOT,
         COVER,
         OTHER,
@@ -69,18 +76,32 @@ object SaveSyncConflictGrouping {
 
     /**
      * The identity of the save behind a path. The metadata sidecar and the preview image both reduce
-     * to the state they belong to, which is what pulls the three of them into one group.
+     * to the state they belong to, which is what pulls the three of them into one group, and an
+     * auto-save reduces further to the save file of the same game.
      */
     private fun groupKeyOf(conflict: SaveSyncConflict): String =
         when (conflict.folder) {
-            SaveSyncFolders.STATES ->
-                "state/${conflict.relativePath.removeSuffix(METADATA_SUFFIX)}"
+            SaveSyncFolders.SAVES -> "$SAVE_KEY_PREFIX${conflict.relativePath}"
+
+            SaveSyncFolders.STATES -> {
+                val stateName = conflict.relativePath.removeSuffix(METADATA_SUFFIX).stateFileName()
+                val romFileName = SaveFileNames.romFileNameForAutoSaveState(stateName)
+
+                if (romFileName != null) {
+                    "$SAVE_KEY_PREFIX${SaveFileNames.saveRam(romFileName)}"
+                } else {
+                    "$STATE_KEY_PREFIX${conflict.relativePath.removeSuffix(METADATA_SUFFIX)}"
+                }
+            }
 
             SaveSyncFolders.STATE_PREVIEWS ->
-                "state/${conflict.relativePath.removeSuffix(PREVIEW_SUFFIX)}"
+                "$STATE_KEY_PREFIX${conflict.relativePath.removeSuffix(PREVIEW_SUFFIX)}"
 
             else -> "${conflict.folder}/${conflict.relativePath}"
         }
+
+    /** States are stored per core, so their file name sits behind a core directory. */
+    private fun String.stateFileName() = substringAfterLast('/')
 
     /**
      * Resolves a path back to a game title, and only when the answer is unambiguous.
@@ -122,9 +143,41 @@ object SaveSyncConflictGrouping {
         val folder = members.first().folder
 
         return when {
-            key.startsWith("state/") -> {
-                // "<core>/<rom file name>.<state|slotN>"
-                val statePath = key.removePrefix("state/").substringAfter('/')
+            key.startsWith(SAVE_KEY_PREFIX) -> {
+                val saveRamFileName = key.removePrefix(SAVE_KEY_PREFIX)
+
+                // A group can be made up of the auto-save alone, when the save file itself did not
+                // diverge. The rom file name is then the better thing to look a title up by: it
+                // carries the extension the save file drops, so it can name a game the save cannot.
+                //
+                // Only when the states all belong to one rom, though. A save file is shared by every
+                // rom with the same base name, so two of them can be in here at once, and naming the
+                // group after either would be picking one of the games arbitrarily.
+                val romFileName =
+                    members
+                        .filter { it.folder == SaveSyncFolders.STATES }
+                        .mapNotNull {
+                            SaveFileNames.romFileNameForAutoSaveState(
+                                it.relativePath.removeSuffix(METADATA_SUFFIX).stateFileName(),
+                            )
+                        }.distinct()
+                        .singleOrNull()
+
+                SaveSyncConflictGroup(
+                    id = key,
+                    conflicts = members,
+                    gameTitle =
+                        romFileName?.let { titles.forRomFileName(it) }
+                            ?: titles.forBaseName(saveRamFileName.substringBeforeLast('.')),
+                    fallbackName = saveRamFileName,
+                    kind = SaveSyncConflictGroup.Kind.SAVE_DATA,
+                    slotNumber = null,
+                )
+            }
+
+            key.startsWith(STATE_KEY_PREFIX) -> {
+                // "<core>/<rom file name>.slotN", the auto-save having been keyed as a save above.
+                val statePath = key.removePrefix(STATE_KEY_PREFIX).substringAfter('/')
                 val suffix = statePath.substringAfterLast('.', "")
                 val romFileName = statePath.substringBeforeLast('.')
                 val slot =
@@ -140,26 +193,12 @@ object SaveSyncConflictGrouping {
                     gameTitle = titles.forRomFileName(romFileName),
                     fallbackName = romFileName,
                     kind =
-                        when {
-                            slot != null -> SaveSyncConflictGroup.Kind.SLOT
-                            suffix == STATE_SUFFIX -> SaveSyncConflictGroup.Kind.AUTO_SAVE
-                            else -> SaveSyncConflictGroup.Kind.OTHER
+                        if (slot != null) {
+                            SaveSyncConflictGroup.Kind.SLOT
+                        } else {
+                            SaveSyncConflictGroup.Kind.OTHER
                         },
                     slotNumber = slot,
-                )
-            }
-
-            folder == SaveSyncFolders.SAVES -> {
-                val fileName = members.first().relativePath
-                val baseName = fileName.substringBeforeLast('.')
-
-                SaveSyncConflictGroup(
-                    id = key,
-                    conflicts = members,
-                    gameTitle = titles.forBaseName(baseName),
-                    fallbackName = fileName,
-                    kind = SaveSyncConflictGroup.Kind.SAVE_DATA,
-                    slotNumber = null,
                 )
             }
 
@@ -191,5 +230,11 @@ object SaveSyncConflictGrouping {
 
     private const val METADATA_SUFFIX = ".metadata"
     private const val PREVIEW_SUFFIX = ".jpg"
-    private const val STATE_SUFFIX = "state"
+
+    /**
+     * Key prefixes, which decide what a group is taken to be. They are not folder names: a save file
+     * and the auto-save beside it come from different folders and share [SAVE_KEY_PREFIX].
+     */
+    private const val SAVE_KEY_PREFIX = "save/"
+    private const val STATE_KEY_PREFIX = "state/"
 }

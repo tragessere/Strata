@@ -64,6 +64,7 @@ import com.swordfish.lemuroid.lib.saves.SavesManager
 import com.swordfish.lemuroid.lib.saves.StatesManager
 import com.swordfish.lemuroid.lib.saves.StatesPreviewManager
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
+import com.swordfish.lemuroid.lib.savesync.SyncInstalledSavesStore
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import com.swordfish.lemuroid.lib.storage.GameCoversManager
 import com.swordfish.lemuroid.lib.storage.GameFilesManager
@@ -83,6 +84,7 @@ import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Converter
 import retrofit2.Retrofit
+import java.io.File
 import java.io.InputStream
 import java.lang.reflect.Type
 import java.util.concurrent.TimeUnit
@@ -348,7 +350,21 @@ abstract class LemuroidApplicationModule {
         fun savesCoherencyEngine(
             savesManager: SavesManager,
             statesManager: StatesManager,
-        ) = SavesCoherencyEngine(savesManager, statesManager)
+            syncInstalledSaves: SyncInstalledSavesStore,
+        ) = SavesCoherencyEngine(savesManager, statesManager, syncInstalledSaves)
+
+        /**
+         * Shared by the sync which writes it and the game launch which reads it. Those run in
+         * different processes, so this provides one instance per process rather than one overall,
+         * which is fine because only the sync side ever writes.
+         */
+        @Provides
+        @PerApp
+        @JvmStatic
+        fun syncInstalledSavesStore(context: Context) =
+            SyncInstalledSavesStore(
+                File(context.filesDir, SyncInstalledSavesStore.INSTALLED_SAVES_FILE_NAME),
+            )
 
         @Provides
         @PerApp
@@ -356,7 +372,8 @@ abstract class LemuroidApplicationModule {
         fun saveSyncManagerImpl(
             context: Context,
             directoriesManager: DirectoriesManager,
-        ) = SaveSyncManagerImpl(context, directoriesManager)
+            syncInstalledSaves: SyncInstalledSavesStore,
+        ) = SaveSyncManagerImpl(context, directoriesManager, syncInstalledSaves)
 
         @Provides
         @PerApp
