@@ -59,11 +59,13 @@ android {
         // Include cores in the final apk
         create("bundle") {
             dimension = "cores"
+            buildConfigField("boolean", "CORE_LIBRARIES_BUNDLED", "true")
         }
 
         // Download cores on demand (from GooglePlay or GitHub)
         create("dynamic") {
             dimension = "cores"
+            buildConfigField("boolean", "CORE_LIBRARIES_BUNDLED", "false")
         }
     }
 

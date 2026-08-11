@@ -41,6 +41,7 @@ import java.io.File
 class CoreUpdaterImpl(
     private val directoriesManager: DirectoriesManager,
     retrofit: Retrofit,
+    private val coreLibrariesBundled: Boolean,
 ) : CoreUpdater {
     // This is the last tagged versions of cores.
     companion object {
@@ -67,7 +68,17 @@ class CoreUpdaterImpl(
         context: Context,
         coreID: CoreID,
     ) {
-        findBundledLibrary(context, coreID) ?: downloadCoreFromGithub(coreID)
+        // A bundled build carries the library in the apk, where GameLoader picks it up from
+        // nativeLibraryDir. The lookup is still worth doing rather than trusting the flavor alone: a
+        // core added to CoreID without a matching entry in :bundled-cores would otherwise be left with
+        // no library at all, and downloading it beats failing to launch.
+        //
+        // A dynamic build never has anything there, so it is only skipped for those.
+        if (coreLibrariesBundled && findBundledLibrary(context, coreID) != null) {
+            return
+        }
+
+        downloadCoreFromGithub(coreID)
     }
 
     private suspend fun retrieveAssets(

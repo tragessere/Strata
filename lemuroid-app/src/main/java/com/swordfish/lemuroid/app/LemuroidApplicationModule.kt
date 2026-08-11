@@ -22,6 +22,7 @@ package com.swordfish.lemuroid.app
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.room.Room
+import com.swordfish.lemuroid.BuildConfig
 import com.swordfish.lemuroid.app.mobile.feature.game.GameActivity
 import com.swordfish.lemuroid.app.mobile.feature.game.GameService
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.GameMenuActivity
@@ -281,7 +282,13 @@ abstract class LemuroidApplicationModule {
         fun coreManager(
             directoriesManager: DirectoriesManager,
             retrofit: Retrofit,
-        ): CoreUpdater = CoreUpdaterImpl(directoriesManager, retrofit)
+        ): CoreUpdater =
+            CoreUpdaterImpl(
+                directoriesManager,
+                retrofit,
+                // Set by the cores flavor dimension, which the ext modules cannot see themselves.
+                coreLibrariesBundled = BuildConfig.CORE_LIBRARIES_BUNDLED,
+            )
 
         @Provides
         @PerApp
