@@ -137,6 +137,10 @@ class MainActivity :
         MainViewModel.Factory(applicationContext, saveSyncManager)
     }
 
+    private val gameLaunchConflictViewModel: GameLaunchConflictViewModel by viewModels {
+        GameLaunchConflictViewModel.Factory(application, saveSyncManager)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             SystemBarStyle.dark(Color.TRANSPARENT),
@@ -223,8 +227,26 @@ class MainActivity :
                 pickArtworkLauncher.launch("image/*")
             }
 
-            val onGameClick = { game: Game ->
-                gameInteractor.onGamePlay(game)
+            // Both go through the conflict gate, which takes over whenever the game has a save the
+            // user has not yet chosen a copy for. It answers false when there is nothing to ask,
+            // which is every launch that does not involve a conflict.
+            //
+            // A sync already running comes first, though. It is in the middle of moving the very
+            // copies the question is about, so any list the dialog could show is one edit behind, and
+            // an answer given against it would be applied to files which have since changed. Falling
+            // straight through to the interactor lets it turn the launch away with the usual "wait
+            // for the pending operations to complete" toast, and the question is asked on the next
+            // attempt, once the sync is done.
+            val onGamePlay = { game: Game ->
+                if (isBusy() || !gameLaunchConflictViewModel.interceptLaunch(game, loadSave = true)) {
+                    gameInteractor.onGamePlay(game)
+                }
+            }
+
+            val onGameRestart = { game: Game ->
+                if (isBusy() || !gameLaunchConflictViewModel.interceptLaunch(game, loadSave = false)) {
+                    gameInteractor.onGameRestart(game)
+                }
             }
 
             val onGameFavoriteToggle = { game: Game, isFavorite: Boolean ->
@@ -300,7 +322,7 @@ class MainActivity :
                                         ),
                                 ),
                             searchQuery = mainUIState.searchQuery,
-                            onGameClick = onGameClick,
+                            onGameClick = onGamePlay,
                             onGameLongClick = onGameLongClick,
                             onOpenCoreSelection = { navController.navigateToRoute(MainRoute.SETTINGS_CORES_SELECTION) },
                         )
@@ -462,8 +484,8 @@ class MainActivity :
             MainGameContextActions(
                 selectedGameState = selectedGameState,
                 shortcutSupported = gameInteractor.supportShortcuts(),
-                onGamePlay = { gameInteractor.onGamePlay(it) },
-                onGameRestart = { gameInteractor.onGameRestart(it) },
+                onGamePlay = onGamePlay,
+                onGameRestart = onGameRestart,
                 onFavoriteToggle = { game: Game, isFavorite: Boolean ->
                     gameInteractor.onFavoriteToggle(game, isFavorite)
                 },
@@ -472,6 +494,23 @@ class MainActivity :
                 loadDataSizes = { gameFilesManager.computeSizes(it) },
                 onDeleteData = { game, types -> deleteGameData(game, types) },
             )
+
+            GameLaunchConflictDialog(viewModel = gameLaunchConflictViewModel)
+
+            // A launch which came through the dialog waits here for the sync it triggered to be out
+            // of the way, since the emulator is about to read the very files it was writing.
+            val approvedLaunch = gameLaunchConflictViewModel.approvedLaunch.collectAsState().value
+            LaunchedEffect(approvedLaunch, mainUIState.operationInProgress) {
+                if (approvedLaunch == null || mainUIState.operationInProgress) {
+                    return@LaunchedEffect
+                }
+                gameLaunchConflictViewModel.consumeApprovedLaunch()
+                if (approvedLaunch.loadSave) {
+                    gameInteractor.onGamePlay(approvedLaunch.game)
+                } else {
+                    gameInteractor.onGameRestart(approvedLaunch.game)
+                }
+            }
         }
     }
 

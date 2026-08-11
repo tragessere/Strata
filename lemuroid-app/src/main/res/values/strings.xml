@@ -115,9 +115,9 @@
         <item quantity="other">%1$d saves changed on this device and in the cloud. Choose which to keep</item>
     </plurals>
     <string name="settings_save_sync_conflicts_none">No conflicts to resolve</string>
-    <string name="save_sync_conflicts_explanation">These files were changed on this device and in the cloud. Pick which one you would like to keep.</string>
-    <string name="save_sync_conflicts_keep_local">Keep the local copy</string>
-    <string name="save_sync_conflicts_keep_remote">Keep the cloud copy</string>
+    <string name="save_sync_conflicts_explanation">These files were changed on this device and in the cloud. Pick which one you would like to use.</string>
+    <string name="save_sync_conflicts_keep_local">This device</string>
+    <string name="save_sync_conflicts_keep_remote">Cloud data</string>
     <string name="save_sync_conflicts_apply">Apply and sync</string>
     <string name="save_sync_conflicts_detail">%1$s · %2$s</string>
     <string name="save_sync_conflicts_kind_save_data">Save data</string>
@@ -125,6 +125,15 @@
     <string name="save_sync_conflicts_kind_slot">Slot %1$d</string>
     <string name="save_sync_conflicts_kind_cover">Cover image</string>
     <string name="save_sync_conflicts_kind_other">Synced file</string>
+
+    <string name="game_launch_conflict_title">Save Conflict</string>
+    <string name="game_launch_conflict_message">This game\'s saved data was changed on this device and in the cloud. Pick which one you would like to use.</string>
+    <string name="game_launch_conflict_apply">Sync and play</string>
+    <string name="game_launch_conflict_later">Decide later</string>
+    <string name="game_launch_conflict_syncing">Syncing game data…</string>
+    <string name="game_launch_conflict_unresolved">The conflict could not be resolved. Check your connection and your sync settings, or open the game with the copy already on this device.</string>
+    <string name="game_launch_conflict_open_anyway">Open anyway</string>
+    <string name="game_launch_conflict_cancel">Cancel</string>
 
     <string name="game_context_menu_add_to_favorites">Add to favorites</string>
     <string name="game_context_menu_remove_from_favorites">Remove from favorites</string>
