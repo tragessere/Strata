@@ -8,10 +8,13 @@ import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Operation
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.await
 import androidx.work.workDataOf
 import coil.imageLoader
 import com.swordfish.lemuroid.app.mobile.feature.settings.SettingsManager
@@ -27,6 +30,7 @@ import dagger.multibindings.IntoMap
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import timber.log.Timber
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -122,16 +126,41 @@ class SaveSyncWork(
         private const val IS_AUTO = "IS_AUTO"
 
         fun enqueueManualWork(applicationContext: Context) {
-            val inputData: Data = workDataOf(IS_AUTO to false)
+            enqueue(applicationContext, buildManualWorkRequest())
+        }
 
+        /**
+         * Enqueues a manual sync and hands back the id of that run. It waits for WorkManager to take
+         * the request on record, not for the sync to happen.
+         *
+         * A caller which has to follow one particular run needs the id, because the unique name also
+         * matches the run before this one. That earlier run may well be sitting there finished, and
+         * waiting for a finished run is over before it begins.
+         */
+        suspend fun enqueueManualWorkAndGetId(applicationContext: Context): UUID {
+            val request = buildManualWorkRequest()
+
+            // Until the enqueue itself has gone through, a lookup by this id finds nothing, which is
+            // indistinguishable from a run which has already been and gone.
+            enqueue(applicationContext, request).result.await()
+
+            return request.id
+        }
+
+        private fun buildManualWorkRequest() =
+            OneTimeWorkRequestBuilder<SaveSyncWork>()
+                .setInputData(workDataOf(IS_AUTO to false))
+                .build()
+
+        private fun enqueue(
+            applicationContext: Context,
+            request: OneTimeWorkRequest,
+        ): Operation =
             WorkManager.getInstance(applicationContext).enqueueUniqueWork(
                 UNIQUE_WORK_ID,
                 ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequestBuilder<SaveSyncWork>()
-                    .setInputData(inputData)
-                    .build(),
+                request,
             )
-        }
 
         fun enqueueAutoWork(
             applicationContext: Context,

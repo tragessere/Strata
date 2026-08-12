@@ -4,9 +4,9 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncConflictGroup
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncConflictGrouping
-import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
 import com.swordfish.lemuroid.app.shared.savesync.SaveSyncWork
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.savesync.ConflictResolution
@@ -16,11 +16,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import timber.log.Timber
+import java.util.UUID
 
 /**
  * Stands between a game and the emulator for as long as one of its saves is in conflict.
@@ -62,6 +63,12 @@ class GameLaunchConflictViewModel(
         val loadSave: Boolean,
     )
 
+    /** How a sync turned out, for when there is no longer a dialog on screen to show it in. */
+    enum class Notice {
+        RESOLVED,
+        UNRESOLVED,
+    }
+
     data class State(
         val launch: PendingLaunch,
         val groups: List<SaveSyncConflictGroup>,
@@ -83,6 +90,15 @@ class GameLaunchConflictViewModel(
      * back until nothing else is writing to the save directories.
      */
     val approvedLaunch: StateFlow<PendingLaunch?> = approvedFlow.asStateFlow()
+
+    private val noticeFlow = MutableStateFlow<Notice?>(null)
+
+    /**
+     * The outcome of a sync which finished with nobody watching, because the dialog was closed while
+     * it ran. Held until it is consumed rather than emitted and forgotten, so a user who was away
+     * from the app still finds out how it went when they come back.
+     */
+    val pendingNotice: StateFlow<Notice?> = noticeFlow.asStateFlow()
 
     /**
      * Returns true when this game has an unanswered conflict and the question has been raised, which
@@ -137,6 +153,10 @@ class GameLaunchConflictViewModel(
         approvedFlow.value = null
     }
 
+    fun consumeNotice() {
+        noticeFlow.value = null
+    }
+
     /**
      * Records the choices, runs a sync to carry them out, and only then lets the game start. Waiting
      * is the whole point: launching while the sync is still replacing a save would hand the session a
@@ -160,16 +180,19 @@ class GameLaunchConflictViewModel(
 
         viewModelScope.launch {
             saveSyncManager.requestConflictResolutions(resolutions)
-            withContext(Dispatchers.IO) {
-                SaveSyncWork.enqueueManualWork(application.applicationContext)
-            }
-            awaitOperationsToSettle()
 
-            // The user may have walked away while the sync ran, in which case there is no longer a
-            // launch waiting on its outcome.
-            if (stateFlow.value?.launch != current.launch) {
-                return@launch
-            }
+            val syncId =
+                withContext(Dispatchers.IO) {
+                    runCatching { SaveSyncWork.enqueueManualWorkAndGetId(application.applicationContext) }
+                        .getOrElse {
+                            // Nothing to wait for, so fall through to the check below, which will
+                            // find the conflicts untouched and say so.
+                            Timber.e(it, "Unable to start the sync for the chosen resolutions")
+                            null
+                        }
+                }
+
+            syncId?.let { awaitSyncToFinish(it) }
 
             val stillPending =
                 saveSyncManager
@@ -178,31 +201,54 @@ class GameLaunchConflictViewModel(
                     .map { it.id }
                     .toSet()
 
-            if (resolutions.keys.none { it in stillPending }) {
+            // Either the sync could not run or one of the copies moved again while it was being asked
+            // about, which makes a recorded choice stale and drops it.
+            val isResolved = resolutions.keys.none { it in stillPending }
+
+            // The dialog may have been closed while this ran, or moved on to another game. The
+            // choices were applied all the same, so the outcome is left as a notice instead of being
+            // dropped. The game is deliberately not started: waiting for it was given up on, and
+            // opening one unasked minutes later would be worse than saying nothing.
+            if (stateFlow.value?.launch != current.launch) {
+                noticeFlow.value = if (isResolved) Notice.RESOLVED else Notice.UNRESOLVED
+                return@launch
+            }
+
+            if (isResolved) {
                 stateFlow.value = null
                 approvedFlow.value = current.launch
             } else {
-                // Either the sync could not run or one of the copies moved again while it was being
-                // asked about, which makes a recorded choice stale and drops it. Say so rather than
-                // start the game as though the answer had been applied.
+                // Say so rather than start the game as though the answer had been applied.
                 stateFlow.value = stateFlow.value?.copy(stage = Stage.UNRESOLVED)
             }
         }
     }
 
     /**
-     * Waits for the sync just enqueued to start and then finish.
+     * Waits for the sync started for these choices to finish.
      *
-     * Every background operation is watched rather than just the sync, since the caller will not
-     * start a game while any of them is running either. Dropping the leading idle readings is what
-     * keeps the wait from ending on the state the queue was in before the work was accepted.
+     * It follows that one run by its id rather than watching for a sync to be running and then not.
+     * The latter only works while this sync is still going when the wait begins, and a sync with
+     * nothing it can do — no account, syncing switched off — is over in milliseconds. Waiting for
+     * that to start is waiting for something which has already happened, and it would hold the
+     * dialog here until the timeout for no reason.
+     *
+     * Losing sight of the run counts as finished, which is what a run replaced by a later sync looks
+     * like. Whether the choices were carried out is never decided here: that is settled afterwards
+     * by asking whether the conflicts are still standing.
+     *
+     * Only this sync is waited for. Anything else the queue is busy with belongs to whoever starts
+     * the game, and it already holds a cleared launch back until the queue is idle.
      */
-    private suspend fun awaitOperationsToSettle() {
+    private suspend fun awaitSyncToFinish(syncId: UUID) {
         withTimeoutOrNull(SYNC_WAIT_TIMEOUT_MS) {
-            PendingOperationsMonitor(application.applicationContext)
-                .anyOperationInProgress()
-                .dropWhile { !it }
-                .first { !it }
+            WorkManager
+                .getInstance(application.applicationContext)
+                .getWorkInfosForUniqueWorkFlow(SaveSyncWork.UNIQUE_WORK_ID)
+                .first { infos ->
+                    val info = infos.firstOrNull { it.id == syncId }
+                    info == null || info.state.isFinished
+                }
         }
     }
 

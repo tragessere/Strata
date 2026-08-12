@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncConflictChoice
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.saveSyncConflictKindLabel
@@ -35,17 +34,13 @@ import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.saveSyncConfl
 @Composable
 fun GameLaunchConflictDialog(viewModel: GameLaunchConflictViewModel) {
     val state = viewModel.state.collectAsState().value ?: return
-    val isSyncing = state.stage == GameLaunchConflictViewModel.Stage.SYNCING
 
     AlertDialog(
-        // Dismissing while the sync runs would leave the game starting against a save which is
-        // being replaced as it loads, so the dialog holds until that is over.
-        onDismissRequest = { if (!isSyncing) viewModel.dismiss() },
-        properties =
-            DialogProperties(
-                dismissOnBackPress = !isSyncing,
-                dismissOnClickOutside = !isSyncing,
-            ),
+        // Dismissable at every stage, including while the sync runs. Closing this never starts a
+        // game: the launch is only ever released once the sync has been checked, and the library
+        // turns a tap away with the usual busy toast for as long as one is running. The sync itself
+        // carries on either way, since the choices were recorded before it was started.
+        onDismissRequest = { viewModel.dismiss() },
         title = { Text(text = stringResource(id = R.string.game_launch_conflict_title)) },
         text = {
             when (state.stage) {
@@ -92,7 +87,15 @@ fun GameLaunchConflictDialog(viewModel: GameLaunchConflictViewModel) {
                     }
                 }
 
-                else -> {
+                // Not "cancel": the sync is not called off, it goes on being reported in the top bar.
+                // What is given up is waiting for it, and with it the game opening on its own.
+                GameLaunchConflictViewModel.Stage.SYNCING -> {
+                    TextButton(onClick = { viewModel.dismiss() }) {
+                        Text(text = stringResource(id = R.string.game_launch_conflict_stop_waiting))
+                    }
+                }
+
+                GameLaunchConflictViewModel.Stage.UNRESOLVED -> {
                     TextButton(onClick = { viewModel.dismiss() }) {
                         Text(text = stringResource(id = R.string.game_launch_conflict_cancel))
                     }

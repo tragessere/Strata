@@ -511,6 +511,24 @@ class MainActivity :
                     gameInteractor.onGameRestart(approvedLaunch.game)
                 }
             }
+
+            // A sync started from the dialog carries on after it is closed, and the progress bar
+            // going away is the only sign it finished. This is the one thing which says how it went.
+            val syncNotice = gameLaunchConflictViewModel.pendingNotice.collectAsState().value
+            LaunchedEffect(syncNotice) {
+                if (syncNotice == null) {
+                    return@LaunchedEffect
+                }
+                gameLaunchConflictViewModel.consumeNotice()
+                displayToast(
+                    when (syncNotice) {
+                        GameLaunchConflictViewModel.Notice.RESOLVED ->
+                            R.string.game_launch_conflict_toast_resolved
+                        GameLaunchConflictViewModel.Notice.UNRESOLVED ->
+                            R.string.game_launch_conflict_toast_unresolved
+                    },
+                )
+            }
         }
     }
 
