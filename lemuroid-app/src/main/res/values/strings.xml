@@ -146,7 +146,7 @@
 
     <string name="game_manage_data_title">Manage data</string>
     <string name="game_manage_data_back">Back</string>
-    <string name="game_manage_data_empty">Gamma is not storing any data for this game.</string>
+    <string name="game_manage_data_empty">Strata is not storing any data for this game.</string>
     <string name="game_manage_data_artwork">Custom artwork</string>
     <string name="game_manage_data_saves">Save data</string>
     <string name="game_manage_data_states">Save states</string>
