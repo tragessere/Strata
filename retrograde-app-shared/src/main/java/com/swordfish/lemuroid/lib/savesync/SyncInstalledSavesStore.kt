@@ -26,8 +26,11 @@ import java.io.File
  *
  * Like the sync baseline and the conflict store this lives in the internal files directory so it is
  * never itself swept up by the sync. Unlike them it is read from the game process, which is a
- * different process from the one the sync runs in: writes only ever happen on the sync side, and the
- * game side reads the file once per launch, so the two never race for it.
+ * different process from the one the sync runs in: writes only ever happen on the sync side, so the
+ * two never race for it, but the reading side cannot hold on to what it read either. That process
+ * outlives a single game, so a copy kept for its lifetime would stop describing the file as soon as
+ * the next sync installed anything, and every launch after that would be back to comparing
+ * timestamps. It is re-read whenever the file itself has moved on, which is a stat per launch.
  */
 class SyncInstalledSavesStore(
     private val storeFile: File,
@@ -38,7 +41,14 @@ class SyncInstalledSavesStore(
         val modifiedAt: Long,
     )
 
+    /** Size and modification time of the file a cache was built from, or null when there was none. */
+    private data class FileStamp(
+        val size: Long,
+        val modifiedAt: Long,
+    )
+
     private var cache: MutableMap<String, Installed>? = null
+    private var cacheStamp: FileStamp? = null
 
     /**
      * Whether the save at [fileName] is still the copy a sync installed.
@@ -76,14 +86,25 @@ class SyncInstalledSavesStore(
 
         runCatching { storeFile.writeTextAtomic(serialize(entries)) }
             .onFailure { Timber.e(it, "Unable to persist sync installed saves") }
+
+        // Taken after the write, so what we just put there is not read straight back in. A failed
+        // write leaves the old stamp, which is what makes the next read notice and reload.
+        cacheStamp = readStamp()
     }
 
     private fun loadCache(): MutableMap<String, Installed> {
-        cache?.let { return it }
+        val stamp = readStamp()
+
+        cache?.let { cached ->
+            if (stamp == cacheStamp) {
+                return cached
+            }
+            Timber.i("Sync installed saves changed underneath us. Reading them again.")
+        }
 
         val loaded =
             runCatching {
-                if (storeFile.exists()) {
+                if (stamp != null) {
                     deserialize(storeFile.readTextAtomic())
                 } else {
                     mutableMapOf()
@@ -96,8 +117,21 @@ class SyncInstalledSavesStore(
             }
 
         cache = loaded
+        cacheStamp = stamp
         return loaded
     }
+
+    /**
+     * What the file looks like from the outside, which is all the sync side gives the game side to
+     * notice a change by. Size is read alongside the modification time because a filesystem which
+     * keeps only whole seconds could otherwise hide two writes made within the same one.
+     */
+    private fun readStamp(): FileStamp? =
+        if (storeFile.isFile) {
+            FileStamp(storeFile.length(), storeFile.lastModified())
+        } else {
+            null
+        }
 
     private fun serialize(entries: Map<String, Installed>): String {
         val root = JSONObject()

@@ -130,7 +130,6 @@ abstract class LemuroidApplicationModule {
     @ContributesAndroidInjector(modules = [GamePadShortcutBindingActivity.Module::class])
     abstract fun gamepadShortcutBindingActivity(): GamePadShortcutBindingActivity
 
-    @Module
     companion object {
         @Provides
         @PerApp

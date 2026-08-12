@@ -246,8 +246,8 @@ class SaveSyncManagerImpl(
         val previousConflicts = conflictStore.readConflicts(folderName)
         val previousResolutions = conflictStore.readResolutions(folderName)
 
-        val remoteFolderId =
-            remote.folderIds[folderName] ?: run {
+        val remoteFolder =
+            remote.folders[folderName] ?: run {
                 // A folder we have synced before cannot simply be absent. Reading a missing listing
                 // as "the remote is empty" would hand every file in it to the deletion path, so leave
                 // the whole folder untouched and wait for a sync which can see it again.
@@ -255,10 +255,10 @@ class SaveSyncManagerImpl(
                     Timber.e("Remote folder $folderName is missing. Skipping it rather than syncing against nothing.")
                     return FolderSyncOutcome(emptySet(), previousConflicts.values.toList())
                 }
-                createAppDataFolder(drive, folderName)
+                RemoteFolder(createAppDataFolder(drive, folderName), emptyMap())
             }
 
-        val remoteFilesMap = remote.filesByFolderId[remoteFolderId] ?: emptyMap()
+        val remoteFilesMap = remoteFolder.filesByPath
         val localFilesMap = buildLocalFileMap(localFolder)
         val processedKeys = getFilteredKeys(remoteFilesMap.keys + localFilesMap.keys, prefixes)
 
@@ -272,17 +272,19 @@ class SaveSyncManagerImpl(
         val consumedResolutions = mutableSetOf<String>()
 
         processedKeys.forEach { relativePath ->
+            val baseline = previousBaseline[relativePath]
+
             val outcome =
                 handleFileSync(
                     drive = drive,
-                    remoteParentFolderId = remoteFolderId,
+                    remoteParentFolderId = remoteFolder.uploadFolderId,
                     localParentFolder = localFolder,
                     folderName = folderName,
                     relativePath = relativePath,
-                    remoteFile = remoteFilesMap[relativePath],
+                    remote = remoteEntryFor(relativePath, remoteFilesMap[relativePath], baseline),
                     previous =
                         PathSyncState(
-                            baseline = previousBaseline[relativePath],
+                            baseline = baseline,
                             conflict = previousConflicts[relativePath],
                             resolution = previousResolutions[relativePath],
                         ),
@@ -320,6 +322,49 @@ class SaveSyncManagerImpl(
         return keys.filter { key -> prefixes.any { key.startsWith(it) } }.toSet()
     }
 
+    /** The remote side of one path: the copy to sync against, and any other copies of it. */
+    private data class RemoteEntry(
+        val file: DriveFile,
+        /**
+         * Copies of the same path sitting in another folder of the same name. They are never read or
+         * written, only trashed alongside [file] when a deletion is propagated, since a survivor
+         * would look like a file this device had never had and be downloaded straight back.
+         */
+        val duplicates: List<DriveFile>,
+    )
+
+    /**
+     * The remote side of a path, or null when the remote does not hold it at all.
+     *
+     * With duplicate folders the same path can exist more than once, and the copy the sync works
+     * against has to be settled before anything else can be said about it. A copy the baseline
+     * already agrees with wins, which pins the choice: were the winner free to change between syncs,
+     * each side would take its turn looking like the one which had moved on, and the two would
+     * overwrite each other indefinitely. Failing that the most recently modified copy wins, as the
+     * one most likely to hold what was last played, with the id settling ties so that every device
+     * arrives at the same answer.
+     */
+    private fun remoteEntryFor(
+        relativePath: String,
+        copies: List<DriveFile>?,
+        baseline: BaselineEntry?,
+    ): RemoteEntry? {
+        if (copies.isNullOrEmpty()) return null
+
+        if (copies.size == 1) {
+            return RemoteEntry(copies.first(), emptyList())
+        }
+
+        Timber.w("Found ${copies.size} remote copies of $relativePath. Syncing against one of them.")
+
+        val ordered = copies.sortedBy { it.id }
+        val file =
+            baseline?.let { entry -> ordered.firstOrNull { entry.matchesRemote(it) } }
+                ?: ordered.maxWith(compareBy<DriveFile> { it.modifiedTime.value }.thenBy { it.id })
+
+        return RemoteEntry(file, ordered.filter { it.id != file.id })
+    }
+
     /** What the stores remembered about a path before this sync looked at it. */
     private data class PathSyncState(
         val baseline: BaselineEntry?,
@@ -355,9 +400,10 @@ class SaveSyncManagerImpl(
         localParentFolder: File,
         folderName: String,
         relativePath: String,
-        remoteFile: DriveFile?,
+        remote: RemoteEntry?,
         previous: PathSyncState,
     ): FileSyncOutcome {
+        val remoteFile = remote?.file
         val localFile = File(localParentFolder, relativePath)
         val localExists = localFile.isFile
 
@@ -379,9 +425,9 @@ class SaveSyncManagerImpl(
                 )
 
             resolved ?: when {
-                remoteFile != null && localExists ->
-                    syncExistingPair(drive, remoteFile, localFile, folderName, relativePath, previous)
-                remoteFile != null -> syncRemoteOnly(drive, remoteFile, localFile, previous.baseline)
+                remote != null && localExists ->
+                    syncExistingPair(drive, remote.file, localFile, folderName, relativePath, previous)
+                remote != null -> syncRemoteOnly(drive, remote, localFile, previous.baseline)
                 localExists ->
                     syncLocalOnly(drive, remoteParentFolderId, localParentFolder, localFile, previous.baseline)
                 else -> FileSyncOutcome(null)
@@ -535,10 +581,12 @@ class SaveSyncManagerImpl(
      */
     private fun syncRemoteOnly(
         drive: Drive,
-        remoteFile: DriveFile,
+        remote: RemoteEntry,
         localFile: File,
         baseline: BaselineEntry?,
     ): FileSyncOutcome {
+        val remoteFile = remote.file
+
         // A remote which moved on since the last agreement was changed by another device. A change
         // beats a deletion: an unwanted file can be deleted again, a lost save cannot come back.
         if (baseline == null || !baseline.matchesRemote(remoteFile)) {
@@ -548,7 +596,7 @@ class SaveSyncManagerImpl(
         }
 
         Timber.i("Local deletion detected for ${remoteFile.name}. Trashing the remote copy.")
-        trashRemote(drive, remoteFile)
+        (listOf(remoteFile) + remote.duplicates).forEach { trashRemote(drive, it) }
         return FileSyncOutcome(null)
     }
 
@@ -593,7 +641,7 @@ class SaveSyncManagerImpl(
 
     /**
      * Trashing rather than deleting keeps the file recoverable through the Drive API for 30 days.
-     * [getRemoteFiles] already filters trashed files out, so it disappears from the merge either
+     * [fetchRemoteSnapshot] already filters trashed files out, so it disappears from the merge either
      * way. Note that appDataFolder contents are hidden from the Drive web UI, so this is a safety
      * net for us rather than something the user can undo themselves.
      */
@@ -709,10 +757,22 @@ class SaveSyncManagerImpl(
 
     /** Everything the remote holds, read in one pass. */
     private data class RemoteSnapshot(
-        /** Synced folder name to its Drive id. */
-        val folderIds: Map<String, String>,
-        /** Drive folder id to the files it holds, keyed by their path relative to that folder. */
-        val filesByFolderId: Map<String, Map<String, DriveFile>>,
+        /** Synced folder name to what the remote holds under it. */
+        val folders: Map<String, RemoteFolder>,
+    )
+
+    /**
+     * One synced folder, which is not necessarily one Drive folder: two devices syncing for the first
+     * time at once can each create a folder of the same name, and neither of them is the wrong one.
+     */
+    private data class RemoteFolder(
+        /** Where this device creates files it uploads. */
+        val uploadFolderId: String,
+        /**
+         * Every copy of every path held under this name, keyed by the path relative to the folder.
+         * Normally one copy each, more only where duplicate folders hold the same path.
+         */
+        val filesByPath: Map<String, List<DriveFile>>,
     )
 
     /**
@@ -720,10 +780,16 @@ class SaveSyncManagerImpl(
      * they hold come back together, which is also why no folder id needs caching: a cached id which
      * had gone stale would produce an empty listing, and an empty listing is indistinguishable from a
      * remote where everything was deleted.
+     *
+     * Folders which share a name are read as one. Choosing between them instead would hide
+     * everything the folders not chosen hold, and hidden is not harmless here: a file which is only
+     * in one of them looks exactly like a file this device deleted, so the next sync would carry that
+     * deletion out on the remote. Which folder came out on top could also change from one sync to the
+     * next, since it depended on what each of them held at the time.
      */
     private fun fetchRemoteSnapshot(drive: Drive): RemoteSnapshot {
-        val foldersByName = mutableMapOf<String, MutableList<String>>()
-        val filesByFolderId = mutableMapOf<String, MutableMap<String, DriveFile>>()
+        val folderIdsByName = mutableMapOf<String, MutableList<String>>()
+        val filesByFolderId = mutableMapOf<String, MutableList<Pair<String, DriveFile>>>()
 
         var pageToken: String? = null
         do {
@@ -740,32 +806,39 @@ class SaveSyncManagerImpl(
 
             result.files.forEach { file ->
                 if (file.mimeType == FOLDER_MIME_TYPE) {
-                    foldersByName.getOrPut(file.name) { mutableListOf() }.add(file.id)
+                    folderIdsByName.getOrPut(file.name) { mutableListOf() }.add(file.id)
                     return@forEach
                 }
 
                 val localPath = file.appProperties?.get(GDRIVE_PROPERTY_LOCAL_PATH) ?: return@forEach
                 val parentId = file.parents?.firstOrNull() ?: return@forEach
-                filesByFolderId.getOrPut(parentId) { mutableMapOf() }[localPath] = file
+                filesByFolderId.getOrPut(parentId) { mutableListOf() }.add(localPath to file)
             }
 
             pageToken = result.nextPageToken
         } while (pageToken != null)
 
-        val folderIds =
-            foldersByName.mapValues { (folderName, ids) ->
-                if (ids.size > 1) {
-                    Timber.w("Found ${ids.size} remote folders named $folderName. Using the fullest one.")
+        val folders =
+            folderIdsByName.mapValues { (folderName, ids) ->
+                val sortedIds = ids.sorted()
+
+                if (sortedIds.size > 1) {
+                    Timber.w("Found ${sortedIds.size} remote folders named $folderName. Reading them as one.")
                 }
-                // Two devices syncing for the first time at once can each create the same folder.
-                // Preferring the one holding the most files keeps whichever copy is actually in use,
-                // and the id break makes every device settle on the same answer.
-                ids.maxWithOrNull(
-                    compareBy<String> { filesByFolderId[it]?.size ?: 0 }.thenByDescending { it },
-                )!!
+
+                RemoteFolder(
+                    // Lowest id rather than, say, the fullest folder, so that this answer does not
+                    // depend on what the folders hold and every device keeps uploading into the same
+                    // one for as long as the duplicates exist.
+                    uploadFolderId = sortedIds.first(),
+                    filesByPath =
+                        sortedIds
+                            .flatMap { filesByFolderId[it] ?: emptyList() }
+                            .groupBy({ it.first }, { it.second }),
+                )
             }
 
-        return RemoteSnapshot(folderIds, filesByFolderId)
+        return RemoteSnapshot(folders)
     }
 
     private fun createAppDataFolder(
