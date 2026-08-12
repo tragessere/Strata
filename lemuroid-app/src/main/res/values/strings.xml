@@ -133,7 +133,7 @@
     <string name="game_launch_conflict_syncing">Syncing game data…</string>
     <string name="game_launch_conflict_unresolved">The conflict could not be resolved. Check your connection and your sync settings, or open the game with the copy already on this device.</string>
     <string name="game_launch_conflict_open_anyway">Open anyway</string>
-    <string name="game_launch_conflict_stop_waiting">Stop waiting</string>
+    <string name="game_launch_conflict_stop_waiting">Dismiss</string>
     <string name="game_launch_conflict_cancel">Cancel</string>
     <string name="game_launch_conflict_toast_resolved">Save conflict resolved</string>
     <string name="game_launch_conflict_toast_unresolved">Save conflict could not be resolved</string>
