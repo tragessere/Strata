@@ -155,6 +155,7 @@ object deps {
         }
 
         const val kotlinxCoroutinesAndroid = "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
+        const val kotlinxCoroutinesGuava   = "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.6.4"
         const val okio                     = "com.squareup.okio:okio:2.10.0"
         const val okHttp3                  = "com.squareup.okhttp3:okhttp:${versions.okHttp}"
         const val retrofit                 = "com.squareup.retrofit2:retrofit:${versions.retrofit}"

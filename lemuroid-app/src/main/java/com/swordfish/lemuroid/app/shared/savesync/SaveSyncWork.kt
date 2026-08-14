@@ -14,7 +14,6 @@ import androidx.work.Operation
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import androidx.work.await
 import androidx.work.workDataOf
 import coil.imageLoader
 import com.swordfish.lemuroid.app.mobile.feature.settings.SettingsManager
@@ -29,6 +28,7 @@ import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.guava.await
 import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -152,6 +152,10 @@ class SaveSyncWork(
 
             // Until the enqueue itself has gone through, a lookup by this id finds nothing, which is
             // indistinguishable from a run which has already been and gone.
+            //
+            // Awaited through the coroutines library rather than with Operation.await(), which is an
+            // inline function over a ListenableFuture extension WorkManager restricts to its own
+            // library group, leaving the restricted call at this call site.
             enqueue(applicationContext, request).result.await()
 
             return request.id

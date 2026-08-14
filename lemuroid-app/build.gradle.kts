@@ -172,6 +172,7 @@ dependencies {
     implementation(deps.libs.dagger.android.support)
     implementation(deps.libs.dagger.core)
     implementation(deps.libs.kotlinxCoroutinesAndroid)
+    implementation(deps.libs.kotlinxCoroutinesGuava)
     implementation(deps.libs.okHttp3)
     implementation(deps.libs.okio)
     implementation(deps.libs.retrofit)
