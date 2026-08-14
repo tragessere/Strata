@@ -36,8 +36,8 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -119,7 +119,7 @@ fun MainGameContextActions(
             ) {
                 // Shared by every page, so the game being acted on stays visible.
                 ContextActionHeader(game = selectedGame)
-                Divider()
+                HorizontalDivider()
 
                 // The pages have very different heights, so the swap animates the sheet between
                 // them instead of letting it snap to the new size.

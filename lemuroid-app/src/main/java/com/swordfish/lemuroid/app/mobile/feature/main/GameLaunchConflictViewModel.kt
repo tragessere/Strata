@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Stands between a game and the emulator for as long as one of its saves is in conflict.
@@ -243,7 +244,7 @@ class GameLaunchConflictViewModel(
      * the game, and it already holds a cleared launch back until the queue is idle.
      */
     private suspend fun awaitSyncToFinish(syncId: UUID) {
-        withTimeoutOrNull(SYNC_WAIT_TIMEOUT_MS) {
+        withTimeoutOrNull(SYNC_WAIT_TIMEOUT_MS.milliseconds) {
             WorkManager
                 .getInstance(application.applicationContext)
                 .getWorkInfosForUniqueWorkFlow(SaveSyncWork.UNIQUE_WORK_ID)

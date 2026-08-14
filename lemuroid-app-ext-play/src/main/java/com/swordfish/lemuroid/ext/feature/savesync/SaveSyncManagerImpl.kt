@@ -437,12 +437,21 @@ class SaveSyncManagerImpl(
                 )
 
             resolved ?: when {
-                remote != null && localExists ->
+                remote != null && localExists -> {
                     syncExistingPair(drive, remote.file, localFile, folderName, relativePath, previous)
-                remote != null -> syncRemoteOnly(drive, remote, localFile, previous.baseline)
-                localExists ->
+                }
+
+                remote != null -> {
+                    syncRemoteOnly(drive, remote, localFile, previous.baseline)
+                }
+
+                localExists -> {
                     syncLocalOnly(drive, remoteParentFolderId, localParentFolder, localFile, previous.baseline)
-                else -> FileSyncOutcome(null)
+                }
+
+                else -> {
+                    FileSyncOutcome(null)
+                }
             }
         }.getOrElse {
             Timber.e(it, "Error while syncing $relativePath")
@@ -455,7 +464,7 @@ class SaveSyncManagerImpl(
     /**
      * Carries out a choice the user made earlier, or returns null to let the normal merge run.
      *
-     * The decision is only honoured while both sides still look the way they did when it was
+     * The decision is only honored while both sides still look the way they did when it was
      * presented. If either has moved on the choice no longer describes what the user was asked
      * about, so it is dropped and the divergence is worked out again from the current state.
      */
@@ -542,8 +551,9 @@ class SaveSyncManagerImpl(
         val remoteDiverged = baseline == null || !baseline.matchesRemote(remoteFile)
 
         return when {
-            localDiverged && remoteDiverged ->
+            localDiverged && remoteDiverged -> {
                 conflictOutcome(remoteFile, localFile, folderName, relativePath, previous)
+            }
 
             localDiverged -> {
                 val updated = onLocalUpdated(localFile, drive, remoteFile)
@@ -560,7 +570,9 @@ class SaveSyncManagerImpl(
             // The baseline claims both sides still agree, yet the content differs. Something wrote
             // without moving a timestamp, so the baseline is the thing that is wrong. Hand it to the
             // user rather than trust either side.
-            else -> conflictOutcome(remoteFile, localFile, folderName, relativePath, previous)
+            else -> {
+                conflictOutcome(remoteFile, localFile, folderName, relativePath, previous)
+            }
         }
     }
 
@@ -914,6 +926,6 @@ class SaveSyncManagerImpl(
             "nextPageToken, " +
                 "files(id, name, mimeType, size, appProperties, modifiedTime, parents, md5Checksum)"
 
-        private val SYNC_LOCK = Object()
+        private val SYNC_LOCK = Any()
     }
 }

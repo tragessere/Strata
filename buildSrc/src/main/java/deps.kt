@@ -1,4 +1,11 @@
-/* ktlint-disable no-multi-spaces max-line-length */
+@file:Suppress(
+    "ktlint:standard:class-naming",
+    "ktlint:standard:filename",
+    "ktlint:standard:max-line-length",
+    "ktlint:standard:no-multi-spaces",
+    "ktlint:standard:property-naming",
+)
+
 object deps {
     object android {
         const val targetSdkVersion  = 35
@@ -41,17 +48,20 @@ object deps {
                 const val recyclerView = "androidx.recyclerview:recyclerview:1.2.1"
                 const val constraintLayout = "androidx.constraintlayout:constraintlayout:2.1.4"
             }
+
             object leanback {
                 const val leanback = "androidx.leanback:leanback:${versions.leanback}"
                 const val leanbackPreference = "androidx.leanback:leanback-preference:${versions.leanback}"
                 const val leanbackPaging = "androidx.leanback:leanback-paging:1.1.0-alpha07"
                 const val tvProvider = "androidx.tvprovider:tvprovider:1.0.0"
             }
+
             object ktx {
                 const val core = "androidx.core:core-ktx:1.8.0"
                 const val coreKtx = "androidx.core:core-ktx:1.8.0"
                 const val collection = "androidx.collection:collection-ktx:1.1.0"
             }
+
             object lifecycle {
                 const val commonJava8 = "androidx.lifecycle:lifecycle-common-java8:${versions.lifecycle}"
                 const val processor = "androidx.lifecycle:lifecycle-compiler:${versions.lifecycle}"
@@ -59,19 +69,23 @@ object deps {
                 const val reactiveStreams = "android.arch.lifecycle:reactivestreams:1.1.1"
                 const val viewModelCompose = "androidx.lifecycle:lifecycle-viewmodel-compose:${versions.lifecycle}"
             }
+
             object preferences {
                 const val preferencesKtx = "androidx.preference:preference-ktx:1.1.1"
             }
+
             object paging {
                 const val common = "androidx.paging:paging-common:${versions.paging}"
                 const val runtime = "androidx.paging:paging-runtime:${versions.paging}"
                 const val compose = "androidx.paging:paging-compose:${versions.paging}"
             }
+
             object navigation {
                 const val navigationFragment = "androidx.navigation:navigation-fragment-ktx:${versions.navigation}"
                 const val navigationUi = "androidx.navigation:navigation-ui-ktx:${versions.navigation}"
                 const val compose = "androidx.navigation:navigation-compose:${versions.navigation}"
             }
+
             object room {
                 const val common = "androidx.room:room-common:${versions.room}"
                 const val compiler = "androidx.room:room-compiler:${versions.room}"
@@ -79,16 +93,20 @@ object deps {
                 const val paging = "androidx.room:room-paging:${versions.room}"
                 const val ktx = "androidx.room:room-ktx:${versions.room}"
             }
+
             object fragment {
                 const val fragment = "androidx.fragment:fragment:${versions.fragment}"
                 const val ktx = "androidx.fragment:fragment-ktx:${versions.fragment}"
             }
+
             const val documentfile = "androidx.documentfile:documentfile:1.0.1"
+
             object activity {
                 const val activity = "androidx.activity:activity:${versions.activity}"
                 const val activityKtx = "androidx.activity:activity-ktx:${versions.activity}"
                 const val compose = "androidx.activity:activity-compose:${versions.activity}"
             }
+
             object compose {
                 const val composeBom = "androidx.compose:compose-bom:${versions.composeBom}"
                 const val material3 = "androidx.compose.material3:material3"
@@ -107,28 +125,34 @@ object deps {
                     const val drawablePainter = "com.google.accompanist:accompanist-drawablepainter:${versions.accompanist}"
                 }
             }
+
             const val profileInstaller = "androidx.profileinstaller:profileinstaller:1.3.1"
         }
+
         object arch {
             object work {
                 const val runtime = "androidx.work:work-runtime:${versions.work}"
                 const val runtimeKtx = "androidx.work:work-runtime-ktx:${versions.work}"
             }
         }
+
         object dagger {
             const val core = "com.google.dagger:dagger:${versions.dagger}"
             const val compiler = "com.google.dagger:dagger-compiler:${versions.dagger}"
+
             object android {
                 const val core = "com.google.dagger:dagger-android:${versions.dagger}"
                 const val processor = "com.google.dagger:dagger-android-processor:${versions.dagger}"
                 const val support = "com.google.dagger:dagger-android-support:${versions.dagger}"
             }
         }
+
         object kotlin {
             const val stdlib = "stdlib"
             const val serialization = "org.jetbrains.kotlinx:kotlinx-serialization-core:${versions.serialization}"
             const val serializationJson = "org.jetbrains.kotlinx:kotlinx-serialization-json:${versions.serialization}"
         }
+
         object play {
             const val review = "com.google.android.play:review:2.0.0"
             const val reviewKtx = "com.google.android.play:review-ktx:2.0.0"
@@ -137,11 +161,13 @@ object deps {
             const val playServices = "com.google.android.gms:play-services-auth:17.0.0"
             const val coroutine = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4"
         }
+
         object gdrive {
             const val apiClient            = "com.google.api-client:google-api-client:${versions.googleApiClient}"
             const val apiClientAndroid     = "com.google.api-client:google-api-client-android:${versions.googleApiClient}"
             const val apiServicesDrive     = "com.google.apis:google-api-services-drive:v3-rev20210725-${versions.googleApiClient}"
         }
+
         object coil {
             const val coil = "io.coil-kt:coil:2.6.0"
             const val coilCompose = "io.coil-kt:coil-compose:2.6.0"
