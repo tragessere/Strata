@@ -81,7 +81,7 @@ class SaveSyncManagerImpl(
                     performSaveSyncForCores(cores)
                 }.getOrElse {
                     Timber.e(it, "Error while performing save sync.")
-                    SaveSyncResult()
+                    SaveSyncResult(isPartial = true)
                 }
             }
         }
@@ -511,6 +511,24 @@ class SaveSyncManagerImpl(
         previous: PathSyncState,
     ): FileSyncOutcome {
         val baseline = previous.baseline
+
+        // Neither side has moved since the last agreement, so there is nothing to work out. Answering
+        // that from the baseline before comparing content is what keeps a sync with nothing to do from
+        // reading and hashing every file it looks at: Drive stores a coarser modification time than
+        // the local filesystem keeps, so two copies of the same bytes rarely carry byte equal
+        // timestamps, and the comparison below falls through to an md5 for every one of them.
+        //
+        // What that gives up is noticing a write which changed the content while leaving both the size
+        // and the modification time exactly as they were. A path which is already in conflict is still
+        // compared, since its baseline can match both sides while the content does not, so an
+        // outstanding conflict is never waved through here.
+        if (previous.conflict == null &&
+            baseline != null &&
+            baseline.matchesLocal(localFile) &&
+            baseline.matchesRemote(remoteFile)
+        ) {
+            return FileSyncOutcome(baseline)
+        }
 
         if (!areFileDifferent(remoteFile, localFile)) {
             // Identical content needs no decision even when there is no baseline yet, which is what

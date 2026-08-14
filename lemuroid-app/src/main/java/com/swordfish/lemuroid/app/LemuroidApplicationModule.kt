@@ -367,10 +367,12 @@ abstract class LemuroidApplicationModule {
         @Provides
         @PerApp
         @JvmStatic
-        fun syncInstalledSavesStore(context: Context) =
-            SyncInstalledSavesStore(
-                File(context.filesDir, SyncInstalledSavesStore.INSTALLED_SAVES_FILE_NAME),
-            )
+        fun syncInstalledSavesStore(
+            context: Context,
+            directoriesManager: DirectoriesManager,
+        ) = SyncInstalledSavesStore(
+            File(context.filesDir, SyncInstalledSavesStore.INSTALLED_SAVES_FILE_NAME),
+        ) { directoriesManager.getSavesDirectory() }
 
         @Provides
         @PerApp

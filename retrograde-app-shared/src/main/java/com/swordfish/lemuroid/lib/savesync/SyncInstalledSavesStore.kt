@@ -34,6 +34,11 @@ import java.io.File
  */
 class SyncInstalledSavesStore(
     private val storeFile: File,
+    /**
+     * Where the saves the entries describe live. Resolved on each use rather than held, since it is
+     * only needed on the writing side and creating it is the directory manager's business.
+     */
+    private val savesDirectory: () -> File,
 ) {
     /** What a save looked like immediately after a sync wrote it. */
     data class Installed(
@@ -83,6 +88,7 @@ class SyncInstalledSavesStore(
         val entries = loadCache()
         entries.keys.removeAll(forgotten)
         entries.putAll(installed)
+        dropExpiredEntries(entries)
 
         runCatching { storeFile.writeTextAtomic(serialize(entries)) }
             .onFailure { Timber.e(it, "Unable to persist sync installed saves") }
@@ -90,6 +96,33 @@ class SyncInstalledSavesStore(
         // Taken after the write, so what we just put there is not read straight back in. A failed
         // write leaves the old stamp, which is what makes the next read notice and reload.
         cacheStamp = readStamp()
+    }
+
+    /**
+     * Forgets entries which have stopped describing their file, which is every entry whose save has
+     * been played since, plus any whose save is gone.
+     *
+     * An entry expires by ceasing to match rather than by being cleared, so nothing else ever removes
+     * one and the store would keep a line for every save a sync has ever installed. One of these
+     * already answers [isInstalled] with false, so dropping it costs nothing and is done here, on the
+     * writing side, where the file is being rewritten anyway.
+     */
+    private fun dropExpiredEntries(entries: MutableMap<String, Installed>) {
+        val directory = runCatching { savesDirectory() }.getOrNull() ?: return
+
+        val expired =
+            entries
+                .filterNot { (fileName, installed) ->
+                    val file = File(directory, fileName)
+                    file.isFile &&
+                        file.length() == installed.size &&
+                        file.lastModified() == installed.modifiedAt
+                }.keys
+
+        if (expired.isEmpty()) return
+
+        Timber.i("Dropping ${expired.size} sync installed saves which no longer match their file")
+        entries.keys.removeAll(expired)
     }
 
     private fun loadCache(): MutableMap<String, Installed> {

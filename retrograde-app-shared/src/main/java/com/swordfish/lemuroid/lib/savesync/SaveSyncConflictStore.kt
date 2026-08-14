@@ -2,9 +2,12 @@ package com.swordfish.lemuroid.lib.savesync
 
 import com.swordfish.lemuroid.common.kotlin.readTextAtomic
 import com.swordfish.lemuroid.common.kotlin.writeTextAtomic
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.File
@@ -33,17 +36,34 @@ class SaveSyncConflictStore(
 
     private val conflictsFlow = MutableStateFlow<List<SaveSyncConflict>>(emptyList())
 
+    private val warmUpScope = CoroutineScope(Dispatchers.IO)
+    private var isWarmUpStarted = false
+
     /**
      * Every unresolved conflict across all folders, for anything which has to display them.
      *
-     * Reads the store on first call so an observer which arrives before the first sync of the session
-     * still sees what is already pending. That is a small file, but it is disk access on the calling
-     * thread.
+     * The first call pulls the store into memory, so an observer which arrives before the first sync
+     * of the session still sees what is already pending. That read happens in the background rather
+     * than on the calling thread: this is reached from the game launch path, which runs on the main
+     * thread, and is the only entry point here which is not already on a worker.
+     *
+     * The flow therefore starts empty and fills in a moment later. A caller which only takes the
+     * current value can miss a conflict in that window, which costs one launch going through
+     * unasked; the conflict itself is untouched and is asked about the next time.
      */
     @Synchronized
     fun observeConflicts(): StateFlow<List<SaveSyncConflict>> {
-        loadCache()
+        if (!isWarmUpStarted) {
+            isWarmUpStarted = true
+            warmUpScope.launch { readIntoMemory() }
+        }
         return conflictsFlow.asStateFlow()
+    }
+
+    /** Loading is all this does: [loadCache] publishes what it read on [conflictsFlow]. */
+    @Synchronized
+    private fun readIntoMemory() {
+        loadCache()
     }
 
     @Synchronized

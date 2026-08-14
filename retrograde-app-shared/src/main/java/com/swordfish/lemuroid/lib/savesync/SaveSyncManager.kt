@@ -21,6 +21,13 @@ data class SaveSyncResult(
      * and they will keep being reported until the user picks a winner.
      */
     val conflicts: List<SaveSyncConflict> = emptyList(),
+    /**
+     * Whether the sync gave up part way through, which is what makes the fields above an incomplete
+     * account rather than an empty one. Callers which only act when something changed have to treat
+     * this as "something may well have", since a run which failed still transferred whatever it got
+     * to before it did.
+     */
+    val isPartial: Boolean = false,
 )
 
 abstract class SaveSyncManager {

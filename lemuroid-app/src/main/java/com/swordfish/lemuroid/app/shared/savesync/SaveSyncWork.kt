@@ -65,7 +65,7 @@ class SaveSyncWork(
                 saveSyncManager.sync(coresToSync)
             } catch (e: Throwable) {
                 Timber.e(e, "Error in saves sync")
-                SaveSyncResult()
+                SaveSyncResult(isPartial = true)
             }
 
         // Runs even if the sync failed, since it may have transferred some files before giving up.
@@ -77,9 +77,19 @@ class SaveSyncWork(
     /**
      * Custom artwork travels with the sync, but the games pointing at it live in the database, so a
      * cover which just arrived (or which the sync deleted) has to be picked up here.
+     *
+     * Only a sync which could have moved one of those files is reconciled. Reconciling reads every
+     * game row, and the periodic sync runs whether or not there is anything to do, so doing it
+     * unconditionally meant walking the whole library every three hours to find nothing. A run which
+     * gave up part way through is reconciled all the same, since it does not report what it managed
+     * to transfer first.
      */
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
     private suspend fun refreshSyncedCovers(syncResult: SaveSyncResult) {
+        if (syncResult.changedCovers.isEmpty() && !syncResult.isPartial) {
+            return
+        }
+
         val reconciledCovers =
             runCatching { lemuroidLibrary.refreshCustomCovers() }
                 .getOrElse {
