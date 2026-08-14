@@ -176,10 +176,7 @@ class SaveSyncWork(
                 request,
             )
 
-        fun enqueueAutoWork(
-            applicationContext: Context,
-            delayMinutes: Long = 0,
-        ) {
+        fun enqueueAutoWork(applicationContext: Context) {
             val inputData: Data = workDataOf(IS_AUTO to true)
 
             WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
@@ -193,7 +190,6 @@ class SaveSyncWork(
                             .setRequiresBatteryNotLow(true)
                             .build(),
                     ).setInputData(inputData)
-                    .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
                     .build(),
             )
         }
