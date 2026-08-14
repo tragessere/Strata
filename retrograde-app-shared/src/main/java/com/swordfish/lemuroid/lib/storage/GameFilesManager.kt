@@ -50,8 +50,7 @@ class GameFilesManager(
     /** Sizes of the data currently stored for [game], leaving out anything which is not present. */
     suspend fun computeSizes(game: Game): Map<GameDataType, Long> =
         withContext(Dispatchers.IO) {
-            GameDataType
-                .values()
+            GameDataType.entries
                 .associateWith { computeSize(game, it) }
                 .filterValues { it > 0L }
         }

@@ -96,14 +96,14 @@ class SaveSyncManagerImpl(
         val remote = fetchRemoteSnapshot(drive)
 
         val conflicts = mutableListOf<SaveSyncConflict>()
-        val syncedFolders = mutableSetOf(SAVES_FOLDER, COVERS_FOLDER)
+        val syncedFolders = mutableSetOf(SaveSyncFolders.SAVES, SaveSyncFolders.COVERS)
 
         val savesDirectory = directoriesManager.getSavesDirectory()
         val savesOutcome =
             syncLocalAndRemoteFolder(
                 drive,
                 remote,
-                SAVES_FOLDER,
+                SaveSyncFolders.SAVES,
                 savesDirectory,
                 null,
             )
@@ -117,7 +117,7 @@ class SaveSyncManagerImpl(
             syncLocalAndRemoteFolder(
                 drive,
                 remote,
-                COVERS_FOLDER,
+                SaveSyncFolders.COVERS,
                 coversDirectory,
                 null,
             )
@@ -129,13 +129,13 @@ class SaveSyncManagerImpl(
 
         if (cores.isNotEmpty()) {
             val corePrefixes = cores.map { it.coreName }.toSet()
-            syncedFolders += setOf(STATES_FOLDER, STATE_PREVIEWS_FOLDER)
+            syncedFolders += setOf(SaveSyncFolders.STATES, SaveSyncFolders.STATE_PREVIEWS)
 
             val statesOutcome =
                 syncLocalAndRemoteFolder(
                     drive,
                     remote,
-                    STATES_FOLDER,
+                    SaveSyncFolders.STATES,
                     directoriesManager.getStatesDirectory(),
                     corePrefixes,
                 )
@@ -146,7 +146,7 @@ class SaveSyncManagerImpl(
                 syncLocalAndRemoteFolder(
                     drive,
                     remote,
-                    STATE_PREVIEWS_FOLDER,
+                    SaveSyncFolders.STATE_PREVIEWS,
                     directoriesManager.getStatesPreviewDirectory(),
                     corePrefixes,
                 ).conflicts
@@ -904,11 +904,6 @@ class SaveSyncManagerImpl(
 
     companion object {
         const val GDRIVE_PROPERTY_LOCAL_PATH = "localPath"
-
-        private const val SAVES_FOLDER = SaveSyncFolders.SAVES
-        private const val COVERS_FOLDER = SaveSyncFolders.COVERS
-        private const val STATES_FOLDER = SaveSyncFolders.STATES
-        private const val STATE_PREVIEWS_FOLDER = SaveSyncFolders.STATE_PREVIEWS
 
         /** Requested on writes so the baseline can record the timestamp Drive actually stored. */
         private const val REMOTE_FILE_FIELDS = "id, size, modifiedTime"

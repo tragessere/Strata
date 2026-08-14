@@ -145,7 +145,7 @@ private fun ManageDataEntries(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Iterating over the enum rather than the map keeps the entries in a stable order.
-        GameDataType.values().forEach { type ->
+        GameDataType.entries.forEach { type ->
             val size = sizes[type] ?: return@forEach
             ManageDataEntry(
                 type = type,

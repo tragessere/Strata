@@ -121,7 +121,6 @@
     <string name="save_sync_conflicts_apply">Apply and sync</string>
     <string name="save_sync_conflicts_detail">%1$s · %2$s</string>
     <string name="save_sync_conflicts_kind_save_data">Save data</string>
-    <string name="save_sync_conflicts_kind_auto_save">Auto save</string>
     <string name="save_sync_conflicts_kind_slot">Slot %1$d</string>
     <string name="save_sync_conflicts_kind_cover">Cover image</string>
     <string name="save_sync_conflicts_kind_other">Synced file</string>
