@@ -81,6 +81,28 @@ class SaveSyncConflictStore(
     }
 
     /**
+     * Forgets everything held for folders outside [folderNames], which is how a folder the sync has
+     * stopped visiting altogether stops being reported.
+     *
+     * [writeFolder] prunes a folder as it syncs it, but a folder which is skipped never reaches it:
+     * unchecking every core under "sync states" leaves both state folders out of the run entirely, and
+     * what they left behind would otherwise stay for good, with no sync left that could clear it.
+     *
+     * Called by the sync rather than by whatever changed the setting, so that the store is only ever
+     * written from one place and a folder is only dropped once a run has actually gone without it.
+     */
+    @Synchronized
+    fun retainFolders(folderNames: Set<String>) {
+        val folders = loadCache()
+        val stale = folders.keys.filter { it !in folderNames }
+        if (stale.isEmpty()) return
+
+        Timber.i("Dropping save sync conflicts for folders which are no longer synced: $stale")
+        stale.forEach { folders.remove(it) }
+        persist(folders)
+    }
+
+    /**
      * Records the user's choices, keyed by [SaveSyncConflict.id]. Ids which are not currently in
      * conflict are ignored, so a decision made against a stale list cannot act on an unrelated path.
      *

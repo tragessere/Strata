@@ -96,6 +96,7 @@ class SaveSyncManagerImpl(
         val remote = fetchRemoteSnapshot(drive)
 
         val conflicts = mutableListOf<SaveSyncConflict>()
+        val syncedFolders = mutableSetOf(SAVES_FOLDER, COVERS_FOLDER)
 
         val savesDirectory = directoriesManager.getSavesDirectory()
         val savesOutcome =
@@ -128,6 +129,7 @@ class SaveSyncManagerImpl(
 
         if (cores.isNotEmpty()) {
             val corePrefixes = cores.map { it.coreName }.toSet()
+            syncedFolders += setOf(STATES_FOLDER, STATE_PREVIEWS_FOLDER)
 
             val statesOutcome =
                 syncLocalAndRemoteFolder(
@@ -149,6 +151,11 @@ class SaveSyncManagerImpl(
                     corePrefixes,
                 ).conflicts
         }
+
+        // A folder which was skipped outright was never written back above, so nothing else prunes
+        // what it left behind. That is the whole of the state folders once the last core is
+        // unchecked, and a conflict in a folder the sync no longer visits can never be resolved.
+        conflictStore.retainFolders(syncedFolders)
 
         lastSyncTimestamp = System.currentTimeMillis()
         Timber.i("Save sync took ${lastSyncTimestamp - startedAt}ms, ${conflicts.size} conflicts pending")
@@ -262,11 +269,16 @@ class SaveSyncManagerImpl(
         val localFilesMap = buildLocalFileMap(localFolder)
         val processedKeys = getFilteredKeys(remoteFilesMap.keys + localFilesMap.keys, prefixes)
 
-        // Paths outside the current prefix filter were not looked at, so what the stores remember
-        // about them has to be carried over untouched rather than dropped. Everything processed is
-        // recomputed from scratch below, which is also what prunes conflicts that are no longer real.
+        // A baseline outside the current prefix filter is carried over untouched. It is the agreement
+        // a later sync of that core has to measure against, and dropping it would leave that sync
+        // unable to tell a deletion from a file this device had never seen.
         val updatedBaseline = previousBaseline.filterKeys { it !in processedKeys }.toMutableMap()
-        val updatedConflicts = previousConflicts.filterKeys { it !in processedKeys }.toMutableMap()
+
+        // Conflicts go the other way, and are recomputed from scratch below. A path which was not
+        // looked at is one this sync could not have resolved either: it is gone from both sides, or it
+        // sits under a core the user has since unchecked. Carrying those over is what left a row on
+        // the conflicts screen, and a dialog in front of every launch, which no answer could clear.
+        val updatedConflicts = mutableMapOf<String, SaveSyncConflict>()
         val locallyChangedPaths = mutableSetOf<String>()
         // Reported rather than rewritten, so a choice made while this sync was running survives.
         val consumedResolutions = mutableSetOf<String>()

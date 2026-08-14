@@ -9,6 +9,34 @@ object SaveSyncFolders {
     const val COVERS = "covers"
     const val STATES = "states"
     const val STATE_PREVIEWS = "state-previews"
+
+    /** Synced for the cores the user picked and no others, each core holding a directory of its own. */
+    val PER_CORE = setOf(STATES, STATE_PREVIEWS)
+}
+
+/**
+ * What a sync would keep in step, given the way it is set up right now.
+ *
+ * A conflict outlives the settings which produced it, and the sync only ever records conflicts for
+ * the paths it looks at. Anything it has stopped looking at is therefore a question nobody can
+ * answer: the resolution would sit waiting for a sync which is never going to read it, while the row
+ * stays on the conflicts screen and the dialog keeps standing in front of the game.
+ */
+data class SaveSyncScope(
+    /** False when nothing is synced at all: no provider, no linked account, or syncing switched off. */
+    val isEnabled: Boolean,
+    /** Names of the cores whose states are synced. Empty leaves both state folders out entirely. */
+    val syncedCores: Set<String>,
+) {
+    /** Decided the way the sync filters its own keys, so the two can never disagree about a path. */
+    fun contains(conflict: SaveSyncConflict): Boolean =
+        when {
+            !isEnabled -> false
+            conflict.folder !in SaveSyncFolders.PER_CORE -> true
+            else -> syncedCores.any { conflict.relativePath.startsWith(it) }
+        }
+
+    fun filter(conflicts: List<SaveSyncConflict>): List<SaveSyncConflict> = conflicts.filter { contains(it) }
 }
 
 /**

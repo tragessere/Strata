@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
+import com.swordfish.lemuroid.app.shared.savesync.ActionableSaveSyncConflicts
 import com.swordfish.lemuroid.lib.library.CoreID
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
 import kotlinx.coroutines.Dispatchers
@@ -50,10 +51,13 @@ class SaveSyncSettingsViewModel(
      * Counted in saves rather than files, since a single savestate is spread over as many as three
      * of them and reporting it as three conflicts would be nonsense. Grouping needs no game titles
      * to work out how many there are, so the library is left out of it here.
+     *
+     * Only conflicts the sync would still act on are counted, so the row goes away as soon as the
+     * settings above it stop covering them rather than offering a screen where nothing can be done.
      */
     val pendingConflictCount =
-        saveSyncManager
-            .pendingConflicts()
+        ActionableSaveSyncConflicts(getContext(), saveSyncManager)
+            .observe()
             .map { SaveSyncConflictGrouping.group(it, emptyList()).size }
             .stateIn(viewModelScope, SharingStarted.Lazily, 0)
 

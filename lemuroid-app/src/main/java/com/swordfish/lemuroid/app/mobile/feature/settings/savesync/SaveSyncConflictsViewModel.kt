@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
+import com.swordfish.lemuroid.app.shared.savesync.ActionableSaveSyncConflicts
 import com.swordfish.lemuroid.app.shared.savesync.SaveSyncWork
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.savesync.ConflictResolution
@@ -37,9 +38,11 @@ class SaveSyncConflictsViewModel(
 
     val saveSyncInProgress = PendingOperationsMonitor(application.applicationContext).anySaveOperationInProgress()
 
+    // Conflicts the sync no longer covers are left out. There is nothing to answer there: the choice
+    // would be recorded and then wait for a run which never looks at that path again.
     val groups =
-        saveSyncManager
-            .pendingConflicts()
+        ActionableSaveSyncConflicts(application, saveSyncManager)
+            .observe()
             .mapLatest { conflicts ->
                 SaveSyncConflictGrouping.group(conflicts, retrogradeDatabase.gameDao().asyncSelectAll())
             }.flowOn(Dispatchers.IO)

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncConflictGroup
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncConflictGrouping
+import com.swordfish.lemuroid.app.shared.savesync.ActionableSaveSyncConflicts
 import com.swordfish.lemuroid.app.shared.savesync.SaveSyncWork
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.savesync.ConflictResolution
@@ -77,6 +78,8 @@ class GameLaunchConflictViewModel(
         val stage: Stage = Stage.CHOOSING,
     )
 
+    private val actionableConflicts = ActionableSaveSyncConflicts(application, saveSyncManager)
+
     private val stateFlow = MutableStateFlow<State?>(null)
 
     /** The question being asked, or null when there is nothing standing in the way of a launch. */
@@ -109,11 +112,10 @@ class GameLaunchConflictViewModel(
         game: Game,
         loadSave: Boolean,
     ): Boolean {
-        if (!saveSyncManager.isSupported() || !saveSyncManager.isConfigured()) {
-            return false
-        }
-
-        val conflicts = GameSaveSyncConflicts.forGame(saveSyncManager.pendingConflicts().value, game)
+        // Only what a sync would still act on. Asking about a save which is no longer synced would
+        // put a question in front of every launch of that game whose every answer comes back
+        // unresolved, since nothing is left to carry the answer out.
+        val conflicts = GameSaveSyncConflicts.forGame(actionableConflicts.current(), game)
         if (conflicts.isEmpty()) {
             return false
         }
