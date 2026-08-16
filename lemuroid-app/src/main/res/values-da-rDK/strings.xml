@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Mere bekvemt, men tungere og mindre pålidelige. Vælg hvilke kerner/systemer, du vil synkronisere</string>
     <string name="game_context_menu_add_to_favorites">Tilføj til favoritter</string>
     <string name="game_context_menu_remove_from_favorites">Fjern fra Favoritter</string>
-    <string name="game_context_menu_resume">Fortsæt</string>
     <string name="game_context_menu_restart">Genstart</string>
     <string name="game_context_menu_create_shortcut">Føj til Startskærm</string>
     <string name="home_notification_title">Aktiver notifikationer</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Controllere</string>
     <string name="core_settings_controller">Controller %1$s</string>
     <string name="game_menu_title">Spilmenu</string>
+    <string name="game_menu_resume">Fortsæt</string>
     <string name="notification_channel_name">Alle notifikationer</string>
     <string name="library_index_notification_title">ROMs skanning i gang</string>
     <string name="library_index_notification_message">Dette kan tage nogle minutter</string>

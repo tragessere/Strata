@@ -67,7 +67,6 @@
     <string name="settings_save_sync_include_states_description">נח יותר, אך כבד יותר ופחות אמין. בחר אילו ליבות/קונסולות תרצה לסנכרן</string>
     <string name="game_context_menu_add_to_favorites">הוסף למועדפים</string>
     <string name="game_context_menu_remove_from_favorites">הסר מהמועדפים</string>
-    <string name="game_context_menu_resume">המשך</string>
     <string name="game_context_menu_restart">הפעל מחדש</string>
     <string name="game_context_menu_create_shortcut">הצמד למסך הבית</string>
     <string name="home_empty_title">בחר את תיקיית היעד בה נמצאים קבצי ה-ROM</string>
@@ -93,6 +92,7 @@
     <string name="core_settings_category_controllers">בקרי משחק</string>
     <string name="core_settings_controller">בקר %1$s</string>
     <string name="game_menu_title">תפריט משחק</string>
+    <string name="game_menu_resume">המשך</string>
     <string name="notification_channel_name">כל ההתראות</string>
     <string name="library_index_notification_message">פעולה זו עשויה להימשך מספר דקות</string>
     <string name="save_sync_notification_title">סינכרון המשחק עם הענן בתהליך</string>

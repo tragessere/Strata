@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Helppokäyttöisempi, mutta raskaampi ja vähemmän luotettava. Valitse mitkä ytimet / järjestelmät haluat synkronoida</string>
     <string name="game_context_menu_add_to_favorites">Lisää suosikkeihin</string>
     <string name="game_context_menu_remove_from_favorites">Poista suosikeista</string>
-    <string name="game_context_menu_resume">Jatka</string>
     <string name="game_context_menu_restart">Käynnistä Uudelleen</string>
     <string name="game_context_menu_create_shortcut">Kiinnitä käynnistettäväksi</string>
     <string name="home_notification_title">Ota ilmoitukset käyttöön</string>
@@ -114,6 +113,7 @@
     <string name="core_settings_category_controllers">Ohjaimet</string>
     <string name="core_settings_controller">Ohjain %1$s</string>
     <string name="game_menu_title">Pelivalikko</string>
+    <string name="game_menu_resume">Jatka</string>
     <string name="notification_channel_name">Kaikki ilmoitukset</string>
     <string name="library_index_notification_title">Parhaillaan käynnissä olevat ROMs skannaus</string>
     <string name="library_index_notification_message">Tämä voi kestää jopa muutaman minuutin</string>

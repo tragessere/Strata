@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Más conveniente, pero más pesado y menos fiable. Elige qué núcleo/sistemas quieres sincronizar</string>
     <string name="game_context_menu_add_to_favorites">Añadir a favoritos</string>
     <string name="game_context_menu_remove_from_favorites">Remover de favoritos</string>
-    <string name="game_context_menu_resume">Continuar</string>
     <string name="game_context_menu_restart">Reiniciar</string>
     <string name="game_context_menu_create_shortcut">Fijar al lanzador</string>
     <string name="home_notification_title">Habilitar notificaciones</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Mandos</string>
     <string name="core_settings_controller">Mando %1$s</string>
     <string name="game_menu_title">Menú de juegos</string>
+    <string name="game_menu_resume">Continuar</string>
     <string name="notification_channel_name">Todas las notificaciones</string>
     <string name="library_index_notification_title">Escaneo de ROMs en curso</string>
     <string name="library_index_notification_message">Esto puede tardar unos minutos</string>

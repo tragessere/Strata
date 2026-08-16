@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FolderDelete
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material3.BottomSheetDefaults
@@ -72,7 +71,6 @@ import com.swordfish.lemuroid.lib.storage.GameFilesManager
 fun MainGameContextActions(
     selectedGameState: MutableState<Game?>,
     shortcutSupported: Boolean,
-    onGamePlay: (Game) -> Unit,
     onGameRestart: (Game) -> Unit,
     onFavoriteToggle: (Game, Boolean) -> Unit,
     onCreateShortcut: (Game) -> Unit,
@@ -140,7 +138,6 @@ fun MainGameContextActions(
                                         actionsHeight = with(density) { it.height.toDp() }
                                     },
                                 selectedGame = selectedGame,
-                                onGamePlay = onGamePlay,
                                 selectedGameState = selectedGameState,
                                 onGameRestart = onGameRestart,
                                 onFavoriteToggle = onFavoriteToggle,
@@ -190,7 +187,6 @@ private fun AnimatedContentTransitionScope<ContextPage>.contextPageTransition():
 private fun ContextActionContent(
     modifier: Modifier = Modifier,
     selectedGame: Game,
-    onGamePlay: (Game) -> Unit,
     selectedGameState: MutableState<Game?>,
     onGameRestart: (Game) -> Unit,
     onFavoriteToggle: (Game, Boolean) -> Unit,
@@ -202,14 +198,6 @@ private fun ContextActionContent(
     onManageData: () -> Unit,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        ContextActionEntry(
-            label = stringResource(id = R.string.game_context_menu_resume),
-            icon = Icons.Default.PlayArrow,
-            onClick = {
-                onGamePlay(selectedGame)
-                selectedGameState.value = null
-            },
-        )
         ContextActionEntry(
             label = stringResource(id = R.string.game_context_menu_restart),
             icon = Icons.Default.RestartAlt,

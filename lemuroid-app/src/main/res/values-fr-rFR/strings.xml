@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Plus pratique, mais plus lourd et moins fiable. Choisissez-les cœurs/systèmes que vous souhaitez synchroniser</string>
     <string name="game_context_menu_add_to_favorites">Ajouter aux favoris</string>
     <string name="game_context_menu_remove_from_favorites">Supprimer des favoris</string>
-    <string name="game_context_menu_resume">Reprendre</string>
     <string name="game_context_menu_restart">Redémarrer</string>
     <string name="game_context_menu_create_shortcut">Épingler à l\'accueil</string>
     <string name="home_notification_title">Activer les notifications</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Manettes</string>
     <string name="core_settings_controller">Manette %1$s</string>
     <string name="game_menu_title">Menu du jeu</string>
+    <string name="game_menu_resume">Reprendre</string>
     <string name="notification_channel_name">Toutes les notifications</string>
     <string name="library_index_notification_title">Scan des ROMs en cours</string>
     <string name="library_index_notification_message">Cela peut prendre quelques minutes</string>

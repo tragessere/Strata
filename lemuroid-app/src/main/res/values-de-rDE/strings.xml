@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Einfacher, aber schwerer und weniger zuverlässig. Wählen Sie aus, welche Kerne/Systeme synchronisiert werden sollen</string>
     <string name="game_context_menu_add_to_favorites">Zu Favoriten hinzufügen</string>
     <string name="game_context_menu_remove_from_favorites">Aus Favoriten entfernen</string>
-    <string name="game_context_menu_resume">Fortsetzen</string>
     <string name="game_context_menu_restart">Neustart</string>
     <string name="game_context_menu_create_shortcut">Zum Startbildschirm hinzufügen</string>
     <string name="home_notification_title">Alle Benachrichtigungen aktivieren</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Controller</string>
     <string name="core_settings_controller">Controller %1$s</string>
     <string name="game_menu_title">Spielmenü</string>
+    <string name="game_menu_resume">Fortsetzen</string>
     <string name="notification_channel_name">Alle Benachrichtigungen</string>
     <string name="library_index_notification_title">ROMs Scannen läuft</string>
     <string name="library_index_notification_message">Dies kann einige Minuten dauern</string>

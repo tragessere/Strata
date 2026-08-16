@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Mer praktisk, men tyngre og mindre pålitelig. Velg hvilke kjerner/systemer du vil synkronisere</string>
     <string name="game_context_menu_add_to_favorites">Legg til favoritter</string>
     <string name="game_context_menu_remove_from_favorites">Fjern fra favoritter</string>
-    <string name="game_context_menu_resume">Fortsett</string>
     <string name="game_context_menu_restart">Start på nytt</string>
     <string name="game_context_menu_create_shortcut">Fest til hjemskjermen</string>
     <string name="home_notification_title">Aktiver varsler</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Kontrollere</string>
     <string name="core_settings_controller">Kontroller %1$s</string>
     <string name="game_menu_title">Spill meny</string>
+    <string name="game_menu_resume">Fortsett</string>
     <string name="notification_channel_name">Alle varsler</string>
     <string name="library_index_notification_title">Skanning av ROM-filer pågår</string>
     <string name="library_index_notification_message">Dette kan ta noen minutter</string>

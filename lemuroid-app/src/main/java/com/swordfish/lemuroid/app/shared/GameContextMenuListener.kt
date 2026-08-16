@@ -14,11 +14,6 @@ class GameContextMenuListener(
         v: View,
         menuInfo: ContextMenu.ContextMenuInfo?,
     ) {
-        menu.add(R.string.game_context_menu_resume).setOnMenuItemClickListener {
-            gameInteractor.onGamePlay(game)
-            true
-        }
-
         menu.add(R.string.game_context_menu_restart).setOnMenuItemClickListener {
             gameInteractor.onGameRestart(game)
             true

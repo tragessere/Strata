@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Πιο βολικό, αλλά βαρύτερο και λιγότερο αξιόπιστο. Επιλέξτε ποιό πυρήνα/συστήματα θέλετε να συγχρονίσετε</string>
     <string name="game_context_menu_add_to_favorites">Προσθήκη στα αγαπημένα</string>
     <string name="game_context_menu_remove_from_favorites">Αφαίρεση από τα αγαπημένα</string>
-    <string name="game_context_menu_resume">Συνέχεια</string>
     <string name="game_context_menu_restart">Επανεκκίνηση</string>
     <string name="game_context_menu_create_shortcut">Καρφίτσωμα στον launcher</string>
     <string name="home_notification_title">Ενεργοποίηση ειδοποιήσεων</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Χειριστήρια</string>
     <string name="core_settings_controller">Χειριστήριο %1$s</string>
     <string name="game_menu_title">Μενού παιχνιδιού</string>
+    <string name="game_menu_resume">Συνέχεια</string>
     <string name="notification_channel_name">Όλες οι ειδοποιήσεις</string>
     <string name="library_index_notification_title">Η Σάρωση των ROMs βρίσκεται σε εξέλιξη</string>
     <string name="library_index_notification_message">H διαδικασία ίσως διαρκέσει μερικά λεπτά</string>

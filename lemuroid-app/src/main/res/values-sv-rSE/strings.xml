@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Bekvämare, men tyngre och mindre tillförlitligt. Välj vilka kärnor/system som du vill synkronisera</string>
     <string name="game_context_menu_add_to_favorites">Lägg till i Favoriter</string>
     <string name="game_context_menu_remove_from_favorites">Ta bort från Favoriter</string>
-    <string name="game_context_menu_resume">Återuppta</string>
     <string name="game_context_menu_restart">Starta om</string>
     <string name="game_context_menu_create_shortcut">Fäst på startskärmen</string>
     <string name="home_notification_title">Aktivera aviseringar</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Handkontroller</string>
     <string name="core_settings_controller">Handkontroll %1$s</string>
     <string name="game_menu_title">Spelmeny</string>
+    <string name="game_menu_resume">Återuppta</string>
     <string name="notification_channel_name">Alla notifikationer</string>
     <string name="library_index_notification_title">Sökning efter ROMs pågår</string>
     <string name="library_index_notification_message">Det kan ta några minuter</string>

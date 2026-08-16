@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Mai convenabil, dar mai greu și mai puțin fiabil. Alegeți corele/sistemele pe care doriți să le sincronizați</string>
     <string name="game_context_menu_add_to_favorites">Adaugă la favorite</string>
     <string name="game_context_menu_remove_from_favorites">Șterge din Favoriți</string>
-    <string name="game_context_menu_resume">Reluaţi</string>
     <string name="game_context_menu_restart">Reporniţi</string>
     <string name="game_context_menu_create_shortcut">Fixează în lansator</string>
     <string name="home_notification_title">Activați notificările</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Controlori</string>
     <string name="core_settings_controller">Controller %1$s</string>
     <string name="game_menu_title">Meniul jocului</string>
+    <string name="game_menu_resume">Reluaţi</string>
     <string name="notification_channel_name">Toate notificările</string>
     <string name="library_index_notification_title">Scanarea ROM-urilor în curs</string>
     <string name="library_index_notification_message">Aceasta poate dura până la câteva minute</string>

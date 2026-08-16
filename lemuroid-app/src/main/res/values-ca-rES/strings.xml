@@ -51,7 +51,6 @@
     <string name="settings_save_sync_include_states">Sincronitzar estats</string>
     <string name="game_context_menu_add_to_favorites">Afegeix als preferits</string>
     <string name="game_context_menu_remove_from_favorites">Elimina dels preferits</string>
-    <string name="game_context_menu_resume">Reprèn</string>
     <string name="game_context_menu_restart">Reinicia</string>
     <string name="home_empty_title">Seleccionar directori de ROMs</string>
     <string name="home_empty_action">Seleccioneu la carpeta</string>
@@ -74,6 +73,7 @@
     <string name="core_settings_category_controllers">Comandaments</string>
     <string name="core_settings_controller">Comandament %1$s</string>
     <string name="game_menu_title">Menú de jocs</string>
+    <string name="game_menu_resume">Reprèn</string>
     <string name="notification_channel_name">Totes les notificacions</string>
     <string name="library_index_notification_title">Escaneig de ROMs en curs</string>
     <string name="library_index_notification_message">Això pot trigar uns minuts</string>

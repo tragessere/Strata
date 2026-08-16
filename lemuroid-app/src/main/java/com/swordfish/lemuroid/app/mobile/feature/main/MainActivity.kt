@@ -540,7 +540,6 @@ class MainActivity :
             MainGameContextActions(
                 selectedGameState = selectedGameState,
                 shortcutSupported = gameInteractor.supportShortcuts(),
-                onGamePlay = onGamePlay,
                 onGameRestart = onGameRestart,
                 onFavoriteToggle = { game: Game, isFavorite: Boolean ->
                     gameInteractor.onFavoriteToggle(game, isFavorite)
