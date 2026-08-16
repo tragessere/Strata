@@ -1,100 +1,92 @@
 package com.swordfish.lemuroid.app.mobile.feature.gamemenu
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.os.Build
-import android.view.Window
-import android.view.WindowManager
-import androidx.annotation.RequiresApi
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import java.util.function.Consumer
-import kotlin.math.roundToInt
-
-/** How far the game behind the menu is blurred once the sheet has finished opening. */
-private val BLUR_RADIUS = 24.dp
 
 /**
- * Reports whether the game behind the menu can be blurred.
+ * Longest side, in pixels, of the frame captured for the menu background.
  *
- * Cross window blurs arrived in Android 12, and even there the system turns them off on devices
- * that cannot afford them and while battery saver is on, so this can change while the menu is open.
+ * The frame is only ever shown blurred, so this is deliberately tiny: it keeps the readback cheap,
+ * and stretching that few hundred pixels back over the screen is already most of the blur.
  */
-@Composable
-internal fun rememberBackgroundBlurEnabled(): Boolean =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        rememberCrossWindowBlurEnabled()
-    } else {
-        false
+internal const val BACKGROUND_CAPTURE_SIZE = 256
+
+/** Ceiling on how long opening the menu waits for a capture before going ahead without one. */
+internal const val BACKGROUND_CAPTURE_TIMEOUT_MS = 300L
+
+/** Softens the edges the capture is stretched into, so it reads as a blur and not as low res. */
+private val BLUR_RADIUS = 16.dp
+
+/**
+ * The frame captured from the game, handed from the game activity to the menu activity.
+ *
+ * The menu is an activity of its own, so the game is not part of the hierarchy the sheet draws into
+ * and cannot be reached with a render effect. Cross window blurs could reach it, but they are a
+ * platform feature the system is free to withhold, and plenty of devices do: Samsung phones report
+ * them unsupported outright. Capturing a frame and blurring that works the same everywhere.
+ *
+ * Both activities run in the same process, so the bitmap is passed directly rather than through the
+ * intent, which could not carry anything this size across a binder transaction anyway.
+ */
+internal object GameMenuBackground {
+    @Volatile
+    private var frame: Bitmap? = null
+
+    fun set(bitmap: Bitmap?) {
+        frame = bitmap
     }
 
-@RequiresApi(Build.VERSION_CODES.S)
-@Composable
-private fun rememberCrossWindowBlurEnabled(): Boolean {
-    val windowManager = LocalContext.current.getSystemService(WindowManager::class.java)
-    var enabled by remember(windowManager) { mutableStateOf(windowManager.isCrossWindowBlurEnabled) }
-
-    DisposableEffect(windowManager) {
-        val listener = Consumer<Boolean> { enabled = it }
-        windowManager.addCrossWindowBlurEnabledListener(listener)
-        onDispose { windowManager.removeCrossWindowBlurEnabledListener(listener) }
+    fun clear() {
+        frame = null
     }
 
-    return enabled
+    fun peek(): Bitmap? = frame
 }
 
 /**
- * Blurs everything drawn behind this activity's window, in step with [progress] going from 0 to 1.
+ * The frame captured as the menu opened, or null if there was none to capture.
  *
- * The menu is a translucent activity of its own, so the game is not part of the hierarchy the sheet
- * draws into and cannot be blurred with a render effect. A window blur is handled further down, by
- * the compositor, which is also why it reaches the game's surface at all. The radius is pushed
- * through the window attributes every time it changes, so the blur ramps up alongside the scrim
- * instead of snapping to full strength the moment the menu appears.
+ * Read once and held for as long as the menu is up, so that clearing the handover on the game side
+ * cannot pull the background out from under a menu that is still on screen.
  */
 @Composable
-internal fun BackgroundBlur(progress: () -> Float) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+internal fun rememberGameMenuBackground(): ImageBitmap? = remember { GameMenuBackground.peek()?.asImageBitmap() }
 
-    val window = LocalContext.current.findActivityWindow() ?: return
-    val maxRadiusPx = with(LocalDensity.current) { BLUR_RADIUS.roundToPx() }
-
-    DisposableEffect(window) {
-        window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-        onDispose {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.setBlurBehindRadius(0)
-        }
-    }
-
-    // snapshotFlow only emits when the rounded radius actually changes, so a slow ramp does not
-    // push the same value through the window attributes on every frame.
-    LaunchedEffect(window, maxRadiusPx) {
-        snapshotFlow { (progress() * maxRadiusPx).roundToInt() }
-            .collect { window.setBlurBehindRadius(it) }
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.S)
-private fun Window.setBlurBehindRadius(radius: Int) {
-    attributes = attributes.also { it.blurBehindRadius = radius }
-}
-
-private fun Context.findActivityWindow(): Window? {
-    var context: Context? = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context.window
-        context = context.baseContext
-    }
-    return null
+/**
+ * Draws the captured frame blurred over the whole screen, fading in as [alpha] goes from 0 to 1.
+ *
+ * The game is still live behind this translucent window, so the fade cross dissolves the real game
+ * into its blurred copy rather than dropping an image on top of it. The game is paused while the
+ * menu is up, which is what lets a still frame stand in for it.
+ *
+ * Cropping rather than fitting matters on rotation: the menu absorbs configuration changes and
+ * keeps the frame it opened with, and cropping re-frames it to the new aspect instead of stretching
+ * it out of shape.
+ */
+@Composable
+internal fun BackgroundBlur(
+    image: ImageBitmap,
+    alpha: () -> Float,
+) {
+    Image(
+        bitmap = image,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { this.alpha = alpha() }
+                .blur(BLUR_RADIUS, BlurredEdgeTreatment.Rectangle),
+    )
 }

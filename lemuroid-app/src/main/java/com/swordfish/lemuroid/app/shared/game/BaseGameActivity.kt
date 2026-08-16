@@ -39,6 +39,7 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.saves.SavesManager
 import com.swordfish.lemuroid.lib.saves.StatesManager
 import com.swordfish.lemuroid.lib.saves.StatesPreviewManager
+import com.swordfish.libretrodroid.GLRetroView
 import com.swordfish.touchinput.radial.sensors.TiltConfiguration
 import dagger.Lazy
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -172,7 +173,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
             .firstOrNull { it.variable.key == exposedSetting.key }
             ?.let { LemuroidCoreOption(exposedSetting, it) }
 
-    private fun displayOptionsDialog(
+    private suspend fun displayOptionsDialog(
         currentTiltConfiguration: TiltConfiguration,
         tiltConfigurations: List<TiltConfiguration>,
     ) {
@@ -221,11 +222,21 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                     baseGameScreenViewModel.isControllerSkinActive(),
                 )
             }
+        prepareGameMenu(baseGameScreenViewModel.retroGameView.retroGameView)
         startActivityForResult(intent, DIALOG_REQUEST)
         applyGameMenuOpenTransition()
     }
 
     protected abstract fun getDialogClass(): Class<out Activity>
+
+    /**
+     * Runs immediately before the game menu is started, while the game is still the only thing on
+     * screen, and holds the menu up for however long it takes.
+     */
+    protected open suspend fun prepareGameMenu(gameView: GLRetroView?) = Unit
+
+    /** Runs once the game menu has closed and whatever it asked for has been handed off. */
+    protected open fun onGameMenuClosed() = Unit
 
     /**
      * Runs right after the game menu is started, while its transition is still pending. A pending
@@ -427,6 +438,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                 val tiltConfig = data.serializable<TiltConfiguration>(GameMenuContract.RESULT_CHANGE_TILT_CONFIG)
                 baseGameScreenViewModel.changeTiltConfiguration(tiltConfig!!)
             }
+            onGameMenuClosed()
         }
     }
 

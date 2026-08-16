@@ -136,9 +136,9 @@ private suspend fun awaitSteadyFrames() {
  * which the animation can be cleared in time. Drawing in the activity's own window instead leaves
  * the slide as the only motion.
  *
- * The game behind is blurred where the platform supports it, with a light scrim over the blur for
- * contrast, and falls back to a plain dim everywhere else. Both follow the same animation, so the
- * background settles as the sheet arrives.
+ * The game behind is covered by a blurred capture of itself, with a light scrim over the blur for
+ * contrast, and falls back to a plain dim if there was no frame to capture. Both follow the same
+ * animation, so the background settles as the sheet arrives.
  *
  * The scrim is drawn here rather than asked for with the window's backgroundDim, because the
  * activity opens with no transition at all: a window animation is the only thing that would fade
@@ -155,10 +155,7 @@ fun GameMenuSheet(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val backgroundBlurred = rememberBackgroundBlurEnabled()
-    if (backgroundBlurred) {
-        BackgroundBlur { state.scrimAlpha.value }
-    }
+    val background = rememberGameMenuBackground()
 
     // The sheet is content sized, so its travel is only known once it has been measured. It is
     // parked off screen until then and slides up from there. This must not be keyed on the height:
@@ -172,9 +169,13 @@ fun GameMenuSheet(
         state.enter()
     }
 
-    val scrimAlpha = if (backgroundBlurred) BLUR_SCRIM_ALPHA else DIM_SCRIM_ALPHA
+    val scrimAlpha = if (background != null) BLUR_SCRIM_ALPHA else DIM_SCRIM_ALPHA
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        if (background != null) {
+            BackgroundBlur(background) { state.scrimAlpha.value }
+        }
+
         Box(
             modifier =
                 Modifier
