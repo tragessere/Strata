@@ -80,6 +80,7 @@ import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.LemuroidLibrary
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 import com.swordfish.lemuroid.lib.library.skin.DeltaSkinManager
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
@@ -269,6 +270,17 @@ class MainActivity :
             val onImportSave = { game: Game ->
                 importSaveTargetGameState.value = game
                 pickSaveLauncher.launch(arrayOf("*/*"))
+            }
+
+            // Saved so a rotation while the keyboard is up does not take away the game the typed
+            // name is meant for. The dialog saves what has been typed so far on its own.
+            val renameTargetGameState =
+                rememberSaveable {
+                    mutableStateOf<Game?>(null)
+                }
+
+            val onRename = { game: Game ->
+                renameTargetGameState.value = game
             }
 
             // Both go through the conflict gate, which takes over whenever the game has a save the
@@ -536,13 +548,25 @@ class MainActivity :
                 onCreateShortcut = { gameInteractor.onCreateShortcut(it) },
                 onChangeArtwork = onChangeArtwork,
                 onImportSave = onImportSave,
+                onRename = onRename,
                 loadDataSizes = { gameFilesManager.computeSizes(it) },
                 onDeleteData = { game, types -> deleteGameData(game, types) },
             )
 
+            renameTargetGameState.value?.let { game ->
+                GameRenameDialog(
+                    game = game,
+                    onConfirm = { customTitle ->
+                        renameTargetGameState.value = null
+                        gameInteractor.onRename(game, customTitle)
+                    },
+                    onCancel = { renameTargetGameState.value = null },
+                )
+            }
+
             replaceSaveRequestState.value?.let { request ->
                 GameImportSaveReplaceDialog(
-                    gameTitle = request.game.title,
+                    gameTitle = request.game.displayTitle,
                     onConfirm = {
                         replaceSaveRequestState.value = null
                         importSave(request.game, request.saveUri.toUri(), true)

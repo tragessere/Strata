@@ -1,6 +1,7 @@
 package com.swordfish.lemuroid.app.mobile.feature.settings.savesync
 
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import com.swordfish.lemuroid.lib.saves.SaveFileNames
 import com.swordfish.lemuroid.lib.savesync.SaveSyncConflict
 import com.swordfish.lemuroid.lib.savesync.SaveSyncFolders
@@ -130,7 +131,7 @@ object SaveSyncConflictGrouping {
 
         private fun Map<String, List<Game>>.unambiguous(): Map<String, String> =
             mapNotNull { (key, games) ->
-                val titles = games.map { it.title }.distinct()
+                val titles = games.map { it.displayTitle }.distinct()
                 if (titles.size == 1) key to titles.first() else null
             }.toMap()
     }

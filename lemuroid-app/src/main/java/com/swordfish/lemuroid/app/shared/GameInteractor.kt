@@ -52,6 +52,24 @@ class GameInteractor(
         }
     }
 
+    /**
+     * Gives [game] a name of the user's own.
+     *
+     * A blank [customTitle] clears it, putting the game back to the name it was indexed under. It is
+     * stored beside the indexed name rather than over it, so the cover lookups and the rescan keep
+     * working off the name the rom actually has.
+     */
+    fun onRename(
+        game: Game,
+        customTitle: String,
+    ) {
+        GlobalScope.launch {
+            retrogradeDb.gameDao().update(
+                game.copy(customTitle = customTitle.trim().ifBlank { null }),
+            )
+        }
+    }
+
     fun onCreateShortcut(game: Game) {
         GlobalScope.launch {
             shortcutsGenerator.pinShortcutForGame(game)

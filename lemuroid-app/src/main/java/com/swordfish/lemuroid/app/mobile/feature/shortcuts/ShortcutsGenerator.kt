@@ -13,6 +13,7 @@ import com.swordfish.lemuroid.app.shared.deeplink.DeepLink
 import com.swordfish.lemuroid.common.bitmap.cropToSquare
 import com.swordfish.lemuroid.common.bitmap.toBitmap
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Response
@@ -39,8 +40,8 @@ class ShortcutsGenerator(
         val shortcutInfo =
             ShortcutInfo
                 .Builder(appContext, "game_${game.id}")
-                .setShortLabel(game.title)
-                .setLongLabel(game.title)
+                .setShortLabel(game.displayTitle)
+                .setLongLabel(game.displayTitle)
                 .setIntent(DeepLink.launchIntentForGame(appContext, game))
                 .setIcon(Icon.createWithBitmap(bitmap))
                 .build()

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AppShortcut
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FolderDelete
@@ -77,6 +78,7 @@ fun MainGameContextActions(
     onCreateShortcut: (Game) -> Unit,
     onChangeArtwork: (Game) -> Unit,
     onImportSave: (Game) -> Unit,
+    onRename: (Game) -> Unit,
     loadDataSizes: suspend (Game) -> Map<GameFilesManager.GameDataType, Long>,
     onDeleteData: (Game, Set<GameFilesManager.GameDataType>) -> Unit,
 ) {
@@ -146,6 +148,7 @@ fun MainGameContextActions(
                                 onCreateShortcut = onCreateShortcut,
                                 onChangeArtwork = onChangeArtwork,
                                 onImportSave = onImportSave,
+                                onRename = onRename,
                                 onManageData = { page = ContextPage.MANAGE_DATA },
                             )
                         ContextPage.MANAGE_DATA ->
@@ -195,6 +198,7 @@ private fun ContextActionContent(
     onCreateShortcut: (Game) -> Unit,
     onChangeArtwork: (Game) -> Unit,
     onImportSave: (Game) -> Unit,
+    onRename: (Game) -> Unit,
     onManageData: () -> Unit,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -234,6 +238,15 @@ private fun ContextActionContent(
                 },
             )
         }
+
+        ContextActionEntry(
+            label = stringResource(id = R.string.game_context_menu_rename),
+            icon = Icons.Default.Edit,
+            onClick = {
+                onRename(selectedGame)
+                selectedGameState.value = null
+            },
+        )
 
         ContextActionEntry(
             label = stringResource(id = R.string.game_context_menu_change_artwork),

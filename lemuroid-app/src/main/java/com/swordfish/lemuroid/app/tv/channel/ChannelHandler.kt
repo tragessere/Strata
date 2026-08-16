@@ -18,6 +18,7 @@ import com.swordfish.lemuroid.app.shared.covers.CoverUtils
 import com.swordfish.lemuroid.app.shared.deeplink.DeepLink
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
@@ -158,7 +159,7 @@ class ChannelHandler(
             PreviewProgram
                 .Builder()
                 .setChannelId(channelId)
-                .setTitle(game.title)
+                .setTitle(game.displayTitle)
                 .setDescription(game.developer)
                 .setIntent(intent)
                 .setStartTimeUtcMillis(game.lastPlayedAt ?: 0)

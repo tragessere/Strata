@@ -16,6 +16,7 @@ import com.swordfish.lemuroid.lib.library.MetaSystemID
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import com.swordfish.lemuroid.lib.library.metaSystemID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -127,7 +128,7 @@ class HomeViewModel(
             if (query.isEmpty()) {
                 allGames
             } else {
-                allGames.filter { it.title.contains(query, ignoreCase = true) }
+                allGames.filter { it.displayTitle.contains(query, ignoreCase = true) }
             }
 
         val sections = mutableListOf<Section>()

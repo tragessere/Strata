@@ -144,7 +144,12 @@
     <string name="game_context_menu_create_shortcut">Pin to launcher</string>
     <string name="game_context_menu_change_artwork">Change artwork</string>
     <string name="game_context_menu_import_save">Import save</string>
+    <string name="game_context_menu_rename">Rename</string>
     <string name="game_context_menu_manage_data">Manage data</string>
+    <string name="game_rename_title">Rename game</string>
+    <string name="game_rename_label">Name</string>
+    <string name="game_rename_supporting">Leave empty to restore \"%1$s\"</string>
+    <string name="game_rename_confirm">Rename</string>
     <string name="game_interactor_custom_artwork_failed">Unable to set custom artwork</string>
     <string name="game_interactor_import_save_succeeded">Save imported</string>
     <string name="game_interactor_import_save_failed">Unable to import the save file</string>

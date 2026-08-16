@@ -11,6 +11,7 @@ import coil.request.CachePolicy
 import com.swordfish.lemuroid.common.drawable.TextDrawable
 import com.swordfish.lemuroid.common.graphics.ColorUtils
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 
@@ -62,9 +63,13 @@ object CoverUtils {
         return "https://fakeimg.pl/512x512/$color/fff/?font=bebas&text=$title"
     }
 
+    // The placeholder stands in for the name on screen, so it follows a game which has been renamed
+    // rather than keeping the initials of the name it was indexed under.
     private fun computeTitle(game: Game): String {
+        val displayTitle = game.displayTitle
+
         val sanitizedName =
-            game.title
+            displayTitle
                 .replace(Regex("\\(.*\\)"), "")
 
         return sanitizedName
@@ -72,9 +77,9 @@ object CoverUtils {
             .filter { it.isDigit() or it.isUpperCase() or (it == '&') }
             .take(3)
             .joinToString("")
-            .ifBlank { game.title.first().toString() }
+            .ifBlank { displayTitle.first().toString() }
             .capitalize()
     }
 
-    private fun computeColor(game: Game): Int = ColorUtils.randomColor(game.title)
+    private fun computeColor(game: Game): Int = ColorUtils.randomColor(game.displayTitle)
 }

@@ -12,6 +12,7 @@ import com.swordfish.lemuroid.app.shared.GameInteractor
 import com.swordfish.lemuroid.app.shared.covers.CoverUtils
 import com.swordfish.lemuroid.app.utils.games.GameUtils
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 
 class GamePresenter(
     private val cardSize: Int,
@@ -23,7 +24,7 @@ class GamePresenter(
     ) {
         if (item == null || viewHolder !is ViewHolder) return
         val game = item as Game
-        viewHolder.mCardView.titleText = game.title
+        viewHolder.mCardView.titleText = game.displayTitle
         viewHolder.mCardView.contentText = GameUtils.getGameSubtitle(viewHolder.mCardView.context, game)
         viewHolder.mCardView.setMainImageDimensions(cardSize, cardSize)
         viewHolder.updateCardViewImage(game)
