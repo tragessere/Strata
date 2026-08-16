@@ -8,6 +8,7 @@ import com.swordfish.lemuroid.lib.saves.migrators.getSavesMigrator
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 
 class SavesManager(
@@ -31,23 +32,31 @@ class SavesManager(
             result.getOrNull()
         }
 
+    /**
+     * Writes [data] as the save for [game], reporting whether it landed.
+     *
+     * Empty data is not a save and is never written: a core with no SRAM hands back an empty array on
+     * every teardown, and writing those would replace a real save with nothing.
+     */
     suspend fun setSaveRAM(
         game: Game,
         data: ByteArray,
-    ) {
+    ): Boolean =
         withContext(Dispatchers.IO) {
+            if (data.isEmpty()) {
+                return@withContext false
+            }
+
             val result =
                 runCatchingWithRetry(FILE_ACCESS_RETRIES) {
-                    if (data.isEmpty()) {
-                        return@runCatchingWithRetry
-                    }
-
                     val saveFile = getSaveFile(getSaveRAMFileName(game))
                     saveFile.writeBytesAtomic(data)
                 }
-            result.getOrNull()
+
+            result
+                .onFailure { Timber.e(it, "Unable to write the save file for ${game.fileName}") }
+                .isSuccess
         }
-    }
 
     suspend fun getSaveRAMInfo(game: Game): SaveInfo =
         withContext(Dispatchers.IO) {

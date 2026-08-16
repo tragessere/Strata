@@ -24,6 +24,17 @@ object SaveFileNames {
     fun saveRam(romFileName: String) = "${romFileName.substringBeforeLast(".")}.$SRM_EXTENSION"
 
     /**
+     * Whether [fileName] names a file we can take in as a save.
+     *
+     * Only the extension we write ourselves is accepted. The contents of one of those are the raw
+     * bytes the core exchanges, which is also what RetroArch keeps in its own ".srm" files, so a save
+     * carried over from there is usable as it stands. Other emulators name their saves differently and
+     * do not all agree on a layout, and one of those copied in unchanged would read as a corrupt save
+     * rather than as a file we refused.
+     */
+    fun isSaveRam(fileName: String) = fileName.substringAfterLast(".", "").lowercase() == SRM_EXTENSION
+
+    /**
      * Saves written by older versions, still read as a fallback whenever the current one is missing.
      * Deleting a save has to take these along, or the next launch would silently restore the data
      * which was just deleted.

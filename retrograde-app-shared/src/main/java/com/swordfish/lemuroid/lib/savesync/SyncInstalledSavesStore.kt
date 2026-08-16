@@ -7,8 +7,8 @@ import timber.log.Timber
 import java.io.File
 
 /**
- * Remembers which save files a sync put on this device, as opposed to ones a session played here
- * wrote.
+ * Remembers which save files arrived from somewhere other than a session played here, whether a sync
+ * brought them down or the user imported one, as opposed to ones a session played here wrote.
  *
  * Nothing on disk records that difference. A save downloaded from the remote keeps the remote's
  * modification time, and a save written at the end of a session keeps the moment the session ended,
@@ -18,7 +18,7 @@ import java.io.File
  * between the two timestamps is no help either, since a downloaded save can land arbitrarily close to
  * the local state it does not belong with.
  *
- * Entries carry the size and modification time the file had once the sync was done with it, which is
+ * Entries carry the size and modification time the file had once it was written, which is
  * what makes them self expiring: the next session rewrites the save and the recorded pair stops
  * matching, so the save counts as locally written again without anything having to clear it. That
  * matters because the write which would do the clearing happens as a game is being torn down, which
@@ -26,10 +26,10 @@ import java.io.File
  *
  * Like the sync baseline and the conflict store this lives in the internal files directory so it is
  * never itself swept up by the sync. Unlike them it is read from the game process, which is a
- * different process from the one the sync runs in: writes only ever happen on the sync side, so the
- * two never race for it, but the reading side cannot hold on to what it read either. That process
- * outlives a single game, so a copy kept for its lifetime would stop describing the file as soon as
- * the next sync installed anything, and every launch after that would be back to comparing
+ * different process from the one the sync and the import run in: writes only ever happen in that one,
+ * so the two processes never race for it, but the reading side cannot hold on to what it read either.
+ * That process outlives a single game, so a copy kept for its lifetime would stop describing the file
+ * as soon as the next save was installed, and every launch after that would be back to comparing
  * timestamps. It is re-read whenever the file itself has moved on, which is a stat per launch.
  */
 class SyncInstalledSavesStore(

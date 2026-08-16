@@ -3,6 +3,7 @@ package com.swordfish.lemuroid.app.mobile.feature.main
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.text.format.Formatter
 import androidx.activity.SystemBarStyle
@@ -25,9 +26,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -80,6 +83,7 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 import com.swordfish.lemuroid.lib.library.skin.DeltaSkinManager
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
+import com.swordfish.lemuroid.lib.saves.SaveImporter
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import com.swordfish.lemuroid.lib.storage.GameFilesManager
@@ -225,6 +229,46 @@ class MainActivity :
             val onChangeArtwork = { game: Game ->
                 artworkTargetGameState.value = game
                 pickArtworkLauncher.launch("image/*")
+            }
+
+            // Saved rather than merely remembered, because the picker is a separate activity and this
+            // one can be recreated behind it. Restoring it as an ordinary state would leave the result
+            // arriving with nothing to apply it to, and the import would silently do nothing.
+            val importSaveTargetGameState =
+                rememberSaveable {
+                    mutableStateOf<Game?>(null)
+                }
+
+            // Set only once the import has found a save already in place, which is the one case the
+            // user has to answer for. It holds the picked file too, since the answer arrives long
+            // after the picker has closed, and is saved so a rotation does not take the question and
+            // the pick behind it away.
+            val replaceSaveRequestState =
+                rememberSaveable {
+                    mutableStateOf<ImportSaveReplaceRequest?>(null)
+                }
+
+            val importSave = { game: Game, saveUri: Uri, replaceExisting: Boolean ->
+                gameInteractor.onImportSave(game, saveUri, replaceExisting) {
+                    replaceSaveRequestState.value = ImportSaveReplaceRequest(game, saveUri.toString())
+                }
+            }
+
+            // Picked with an explicit "any type" filter rather than a mime type: save files have none
+            // of their own, so a filtered picker would hide the very files being looked for. The
+            // interactor turns away anything which is not a save.
+            val pickSaveLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { saveUri ->
+                    val targetGame = importSaveTargetGameState.value
+                    if (saveUri != null && targetGame != null) {
+                        importSave(targetGame, saveUri, false)
+                    }
+                    importSaveTargetGameState.value = null
+                }
+
+            val onImportSave = { game: Game ->
+                importSaveTargetGameState.value = game
+                pickSaveLauncher.launch(arrayOf("*/*"))
             }
 
             // Both go through the conflict gate, which takes over whenever the game has a save the
@@ -491,9 +535,21 @@ class MainActivity :
                 },
                 onCreateShortcut = { gameInteractor.onCreateShortcut(it) },
                 onChangeArtwork = onChangeArtwork,
+                onImportSave = onImportSave,
                 loadDataSizes = { gameFilesManager.computeSizes(it) },
                 onDeleteData = { game, types -> deleteGameData(game, types) },
             )
+
+            replaceSaveRequestState.value?.let { request ->
+                GameImportSaveReplaceDialog(
+                    gameTitle = request.game.title,
+                    onConfirm = {
+                        replaceSaveRequestState.value = null
+                        importSave(request.game, request.saveUri.toUri(), true)
+                    },
+                    onCancel = { replaceSaveRequestState.value = null },
+                )
+            }
 
             GameLaunchConflictDialog(viewModel = gameLaunchConflictViewModel)
 
@@ -599,7 +655,16 @@ class MainActivity :
                 shortcutsGenerator: ShortcutsGenerator,
                 gameLauncher: GameLauncher,
                 lemuroidLibrary: LemuroidLibrary,
-            ) = GameInteractor(activity, retrogradeDb, false, shortcutsGenerator, gameLauncher, lemuroidLibrary)
+                saveImporter: SaveImporter,
+            ) = GameInteractor(
+                activity,
+                retrogradeDb,
+                false,
+                shortcutsGenerator,
+                gameLauncher,
+                lemuroidLibrary,
+                saveImporter,
+            )
         }
     }
 }

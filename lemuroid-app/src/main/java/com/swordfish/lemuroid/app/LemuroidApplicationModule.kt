@@ -60,6 +60,7 @@ import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 import com.swordfish.lemuroid.lib.library.skin.DeltaSkinManager
 import com.swordfish.lemuroid.lib.migration.DesmumeMigrationHandler
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
+import com.swordfish.lemuroid.lib.saves.SaveImporter
 import com.swordfish.lemuroid.lib.saves.SavesCoherencyEngine
 import com.swordfish.lemuroid.lib.saves.SavesManager
 import com.swordfish.lemuroid.lib.saves.StatesManager
@@ -256,6 +257,13 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
+        fun saveImporter(
+            savesManager: SavesManager,
+            syncInstalledSaves: SyncInstalledSavesStore,
+        ) = SaveImporter(savesManager, syncInstalledSaves)
+
+        @Provides
+        @PerApp
         fun statesPreviewManager(directoriesManager: DirectoriesManager) = StatesPreviewManager(directoriesManager)
 
         @Provides
@@ -334,9 +342,9 @@ abstract class LemuroidApplicationModule {
         ) = SavesCoherencyEngine(savesManager, statesManager, syncInstalledSaves)
 
         /**
-         * Shared by the sync which writes it and the game launch which reads it. Those run in
-         * different processes, so this provides one instance per process rather than one overall,
-         * which is fine because only the sync side ever writes.
+         * Shared by the sync and the save import which write it and the game launch which reads it.
+         * The readers run in a different process from the writers, so this provides one instance per
+         * process rather than one overall, which is fine because the two writers are in the same one.
          */
         @Provides
         @PerApp

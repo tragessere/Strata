@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.FolderDelete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -75,6 +76,7 @@ fun MainGameContextActions(
     onFavoriteToggle: (Game, Boolean) -> Unit,
     onCreateShortcut: (Game) -> Unit,
     onChangeArtwork: (Game) -> Unit,
+    onImportSave: (Game) -> Unit,
     loadDataSizes: suspend (Game) -> Map<GameFilesManager.GameDataType, Long>,
     onDeleteData: (Game, Set<GameFilesManager.GameDataType>) -> Unit,
 ) {
@@ -143,6 +145,7 @@ fun MainGameContextActions(
                                 shortcutSupported = shortcutSupported,
                                 onCreateShortcut = onCreateShortcut,
                                 onChangeArtwork = onChangeArtwork,
+                                onImportSave = onImportSave,
                                 onManageData = { page = ContextPage.MANAGE_DATA },
                             )
                         ContextPage.MANAGE_DATA ->
@@ -191,6 +194,7 @@ private fun ContextActionContent(
     shortcutSupported: Boolean,
     onCreateShortcut: (Game) -> Unit,
     onChangeArtwork: (Game) -> Unit,
+    onImportSave: (Game) -> Unit,
     onManageData: () -> Unit,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -236,6 +240,15 @@ private fun ContextActionContent(
             icon = Icons.Default.Image,
             onClick = {
                 onChangeArtwork(selectedGame)
+                selectedGameState.value = null
+            },
+        )
+
+        ContextActionEntry(
+            label = stringResource(id = R.string.game_context_menu_import_save),
+            icon = Icons.Default.SaveAlt,
+            onClick = {
+                onImportSave(selectedGame)
                 selectedGameState.value = null
             },
         )
