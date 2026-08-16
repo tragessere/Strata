@@ -59,11 +59,13 @@ android {
         // Include cores in the final apk
         create("bundle") {
             dimension = "cores"
+            buildConfigField("boolean", "CORE_LIBRARIES_BUNDLED", "true")
         }
 
         // Download cores on demand (from GooglePlay or GitHub)
         create("dynamic") {
             dimension = "cores"
+            buildConfigField("boolean", "CORE_LIBRARIES_BUNDLED", "false")
         }
     }
 
@@ -170,6 +172,7 @@ dependencies {
     implementation(deps.libs.dagger.android.support)
     implementation(deps.libs.dagger.core)
     implementation(deps.libs.kotlinxCoroutinesAndroid)
+    implementation(deps.libs.kotlinxCoroutinesGuava)
     implementation(deps.libs.okHttp3)
     implementation(deps.libs.okio)
     implementation(deps.libs.retrofit)

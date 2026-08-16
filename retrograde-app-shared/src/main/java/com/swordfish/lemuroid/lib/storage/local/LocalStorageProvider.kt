@@ -23,7 +23,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.leanback.preference.LeanbackPreferenceFragment
-import com.swordfish.lemuroid.common.files.safeDelete
 import com.swordfish.lemuroid.common.kotlin.extractEntryToFile
 import com.swordfish.lemuroid.common.kotlin.isZipped
 import com.swordfish.lemuroid.lib.R
@@ -32,7 +31,6 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
 import com.swordfish.lemuroid.lib.storage.BaseStorageFile
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
-import com.swordfish.lemuroid.lib.storage.GameArtFiles
 import com.swordfish.lemuroid.lib.storage.RomFiles
 import com.swordfish.lemuroid.lib.storage.StorageFile
 import com.swordfish.lemuroid.lib.storage.StorageProvider
@@ -61,33 +59,6 @@ class LocalStorageProvider(
 
     override fun getStorageFile(baseStorageFile: BaseStorageFile): StorageFile? =
         DocumentFileParser.parseDocumentFile(context, baseStorageFile)
-
-    override fun getGameArtUri(gameFileUri: Uri): Uri? {
-        val gameFile = gameFileUri.path?.let { File(it) } ?: return null
-        val directory = gameFile.parentFile ?: return null
-        val baseName = gameFile.nameWithoutExtension
-        return GameArtFiles.SUPPORTED_EXTENSIONS
-            .map { File(directory, "$baseName.$it") }
-            .firstOrNull { it.isFile }
-            ?.toUri()
-    }
-
-    override fun writeGameArt(
-        gameFileUri: Uri,
-        imageExtension: String,
-        inputStream: InputStream,
-    ): Uri? {
-        val gameFile = gameFileUri.path?.let { File(it) } ?: return null
-        val directory = gameFile.parentFile ?: return null
-        val baseName = gameFile.nameWithoutExtension
-
-        // Remove any pre-existing artwork so a single image (with the chosen extension) remains.
-        GameArtFiles.SUPPORTED_EXTENSIONS.forEach { File(directory, "$baseName.$it").safeDelete() }
-
-        val target = File(directory, "$baseName.$imageExtension")
-        inputStream.use { input -> target.outputStream().use { output -> input.copyTo(output) } }
-        return target.toUri()
-    }
 
     private fun getExternalFolder(): File? {
         val prefString = context.getString(R.string.pref_key_legacy_external_folder)

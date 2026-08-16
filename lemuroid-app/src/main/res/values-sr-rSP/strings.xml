@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">(Згодније, али ресурсно захтевније и мање поуздано) Изаберите која језгра/системе желите да синхронизујете</string>
     <string name="game_context_menu_add_to_favorites">Додајте у омиљено</string>
     <string name="game_context_menu_remove_from_favorites">Уклоните из омиљених</string>
-    <string name="game_context_menu_resume">Настави</string>
     <string name="game_context_menu_restart">Рестартуј</string>
     <string name="game_context_menu_create_shortcut">Закачи на покретач</string>
     <string name="home_notification_title">Омогући обавештења</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Контролери</string>
     <string name="core_settings_controller">Контролер %1$s</string>
     <string name="game_menu_title">Мени игре</string>
+    <string name="game_menu_resume">Настави</string>
     <string name="notification_channel_name">Сва обавештења</string>
     <string name="library_index_notification_title">Скенирање ROM-ова се одвија</string>
     <string name="library_index_notification_message">Ово може потрајати до неколико минута</string>

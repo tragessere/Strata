@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">更加方便，但同时也更重和更不可靠。选择您想要同步的核心/系统</string>
     <string name="game_context_menu_add_to_favorites">添加到收藏</string>
     <string name="game_context_menu_remove_from_favorites">从收藏中移除</string>
-    <string name="game_context_menu_resume">继续</string>
     <string name="game_context_menu_restart">重新开始</string>
     <string name="game_context_menu_create_shortcut">添加到桌面</string>
     <string name="home_notification_title">开启推送</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">控制器</string>
     <string name="core_settings_controller">控制器 %1$s</string>
     <string name="game_menu_title">游戏菜单</string>
+    <string name="game_menu_resume">继续</string>
     <string name="notification_channel_name">所有通知</string>
     <string name="library_index_notification_title">正在进行 ROM 扫描</string>
     <string name="library_index_notification_message">这可能需要几分钟的时间</string>

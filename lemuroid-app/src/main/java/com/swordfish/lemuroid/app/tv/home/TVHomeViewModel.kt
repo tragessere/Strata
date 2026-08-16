@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(FlowPreview::class)
 class TVHomeViewModel(
@@ -77,7 +78,7 @@ class TVHomeViewModel(
                 )
 
             uiStatesFlow
-                .debounce(DEBOUNCE_TIME)
+                .debounce(DEBOUNCE_TIME.milliseconds)
                 .flowOn(Dispatchers.IO)
                 .collect { viewStates.value = it }
         }
@@ -101,7 +102,7 @@ class TVHomeViewModel(
                 .filter { (_, count) -> count > 0 }
                 .map { (systemId, count) -> GameSystem.findById(systemId).metaSystemID() to count }
                 .groupBy { (metaSystemId, _) -> metaSystemId }
-                .map { (metaSystemId, counts) -> MetaSystemInfo(metaSystemId, counts.sumBy { it.second }) }
+                .map { (metaSystemId, counts) -> MetaSystemInfo(metaSystemId, counts.sumOf { it.second }) }
                 .sortedBy { it.getName(appContext) }
                 .toList()
         }

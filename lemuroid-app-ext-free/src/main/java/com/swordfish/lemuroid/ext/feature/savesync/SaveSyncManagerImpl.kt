@@ -3,12 +3,22 @@ package com.swordfish.lemuroid.ext.feature.savesync
 import android.app.Activity
 import android.content.Context
 import com.swordfish.lemuroid.lib.library.CoreID
+import com.swordfish.lemuroid.lib.savesync.ConflictResolution
+import com.swordfish.lemuroid.lib.savesync.SaveSyncConflict
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
+import com.swordfish.lemuroid.lib.savesync.SaveSyncResult
+import com.swordfish.lemuroid.lib.savesync.SyncInstalledSavesStore
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class SaveSyncManagerImpl(
     private val appContext: Context,
     private val directoriesManager: DirectoriesManager,
+    // Never written to without a sync to install anything, and kept only to match the signature the
+    // application module constructs both flavours with.
+    private val syncInstalledSaves: SyncInstalledSavesStore,
 ) : SaveSyncManager() {
     override fun getProvider(): String = ""
 
@@ -22,9 +32,17 @@ class SaveSyncManagerImpl(
 
     override fun getConfigInfo(): String = ""
 
-    override suspend fun sync(cores: Set<CoreID>) {}
+    override suspend fun sync(cores: Set<CoreID>) = SaveSyncResult()
+
+    override fun pendingConflicts(): StateFlow<List<SaveSyncConflict>> = noConflicts
+
+    override suspend fun requestConflictResolutions(resolutions: Map<String, ConflictResolution>) = Unit
 
     override fun computeSavesSpace() = ""
 
     override fun computeStatesSpace(coreID: CoreID) = ""
+
+    private companion object {
+        val noConflicts = MutableStateFlow<List<SaveSyncConflict>>(emptyList()).asStateFlow()
+    }
 }

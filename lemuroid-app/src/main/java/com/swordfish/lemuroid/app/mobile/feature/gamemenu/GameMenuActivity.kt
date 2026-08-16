@@ -10,6 +10,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
@@ -65,6 +67,8 @@ import javax.inject.Inject
 
 /** Keeps a sliver of the game visible above the sheet even when every option is shown. */
 private const val MAX_SHEET_HEIGHT_FRACTION = 0.85f
+
+private const val ROUTE_ANIM_DURATION = 250
 
 private val HEADER_HEIGHT = 56.dp
 private val HEADER_HORIZONTAL_PADDING = 4.dp
@@ -208,12 +212,15 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                     if (currentRoute.canGoBack()) {
                         HorizontalDivider(modifier = Modifier.fillMaxWidth())
                     }
+                    // The routes have very different heights, so the sheet animates between them
+                    // rather than snapping to the size of whichever one just arrived.
                     NavHost(
                         modifier = Modifier.fillMaxWidth(),
                         navController = navController,
                         startDestination = GameMenuRoute.HOME.route,
-                        enterTransition = { fadeIn() },
-                        exitTransition = { fadeOut() },
+                        enterTransition = { fadeIn(tween(ROUTE_ANIM_DURATION)) },
+                        exitTransition = { fadeOut(tween(ROUTE_ANIM_DURATION)) },
+                        sizeTransform = { SizeTransform { _, _ -> tween(ROUTE_ANIM_DURATION) } },
                     ) {
                         composable(GameMenuRoute.HOME) {
                             GameMenuHomeScreen(navController, gameMenuRequest, dismissWithResult)

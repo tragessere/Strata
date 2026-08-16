@@ -43,23 +43,6 @@ interface StorageProvider {
 
     fun getStorageFile(baseStorageFile: BaseStorageFile): StorageFile?
 
-    /**
-     * Returns the uri of a custom artwork image sitting next to the given game file (same directory,
-     * same base name, an image extension), or null if none is present.
-     */
-    fun getGameArtUri(gameFileUri: Uri): Uri?
-
-    /**
-     * Writes [inputStream] as custom artwork next to the given game file, using the game file base
-     * name and [imageExtension]. Any pre-existing artwork for the game is replaced. Returns the uri
-     * of the written image, or null if it could not be written.
-     */
-    fun writeGameArt(
-        gameFileUri: Uri,
-        imageExtension: String,
-        inputStream: InputStream,
-    ): Uri?
-
     fun getGameRomFiles(
         game: Game,
         dataFiles: List<DataFile>,

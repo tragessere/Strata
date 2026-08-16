@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.app.utils.games.GameUtils
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 
 @Composable
 fun LemuroidGameTexts(
@@ -27,7 +28,7 @@ fun LemuroidGameTexts(
             GameUtils.getGameSubtitle(context, game)
         }
 
-    LemuroidTexts(modifier, game.title, subtitle)
+    LemuroidTexts(modifier, game.displayTitle, subtitle)
 }
 
 @Composable
@@ -40,7 +41,7 @@ fun LemuroidGameGridTexts(
     ) {
         Text(
             modifier = Modifier.fillMaxWidth(),
-            text = game.title,
+            text = game.displayTitle,
             style = MaterialTheme.typography.titleSmall,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,

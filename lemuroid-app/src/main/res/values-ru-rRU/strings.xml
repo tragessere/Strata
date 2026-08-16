@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Удобнее, но тяжелее и менее надежно.  Выберите, какие ядра / системы вы хотите синхронизировать</string>
     <string name="game_context_menu_add_to_favorites">Добавить в избранное</string>
     <string name="game_context_menu_remove_from_favorites">Удалить из избранного</string>
-    <string name="game_context_menu_resume">Продолжить</string>
     <string name="game_context_menu_restart">Перезапустить</string>
     <string name="game_context_menu_create_shortcut">Закрепить в лаунчере</string>
     <string name="home_notification_title">Включить уведомления</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Контроллеры</string>
     <string name="core_settings_controller">Контроллер %1$s</string>
     <string name="game_menu_title">Меню игры</string>
+    <string name="game_menu_resume">Продолжить</string>
     <string name="notification_channel_name">Все уведомления</string>
     <string name="library_index_notification_title">Идёт сканирование ROM-файлов</string>
     <string name="library_index_notification_message">Это может занять несколько минут</string>

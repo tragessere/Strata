@@ -29,6 +29,7 @@ import kotlin.time.Duration.Companion.seconds
 class CoreUpdaterImpl(
     private val directoriesManager: DirectoriesManager,
     retrofit: Retrofit,
+    private val coreLibrariesBundled: Boolean,
 ) : CoreUpdater {
     private val api = retrofit.create(CoreUpdater.CoreManagerApi::class.java)
 
@@ -36,9 +37,38 @@ class CoreUpdaterImpl(
         context: Context,
         coreIDs: List<CoreID>,
     ) {
-        val installManager = SplitInstallManagerFactory.create(context)
-        val installSession = installCores(installManager, coreIDs, context)
+        // Assets are fetched over the network in every flavor, so they are still needed when the core
+        // libraries themselves ship inside the apk. Cheap once they are current, since
+        // retrieveAssetsIfNeeded returns immediately unless the stored version key is stale.
+        try {
+            installAssets(context, coreIDs)
+        } catch (e: Throwable) {
+            log("Error while installing assets: ${e.message}")
+        }
 
+        // A bundled build has nothing to deliver on demand, and it does not even produce the modules
+        // this would ask for: the cores flavor decides whether the :lemuroid_core_* projects are part
+        // of the build at all. Asking Play to install modules which were never uploaded only burns the
+        // retry budget below while the UI shows an operation in progress.
+        if (coreLibrariesBundled) {
+            log("Core libraries are bundled in the apk. Skipping Play delivery.")
+            return
+        }
+
+        val installManager = SplitInstallManagerFactory.create(context)
+        val installSession = requestCoresInstall(installManager, coreIDs)
+
+        if (installSession != null) {
+            try {
+                waitForCompletion(installSession, installManager)
+            } catch (e: Throwable) {
+                log("Error while waiting for core install: ${e.message}")
+            }
+        }
+
+        // Deliberately runs even when nothing was requested here. This cancels sessions left behind by
+        // earlier runs, and a run which found everything already installed is exactly the one most
+        // likely to have a stale session to clear.
         try {
             cancelPendingInstalls(installManager, installSession)
         } catch (e: Throwable) {
@@ -46,28 +76,6 @@ class CoreUpdaterImpl(
         }
 
         log("downloadCores has terminated")
-    }
-
-    private suspend fun installCores(
-        installManager: SplitInstallManager,
-        coreIDs: List<CoreID>,
-        context: Context,
-    ): Int? {
-        val installSession = requestCoresInstall(installManager, coreIDs) ?: return null
-
-        try {
-            waitForCompletion(installSession, installManager)
-        } catch (e: Throwable) {
-            log("Error while waiting for core install: ${e.message}")
-        }
-
-        try {
-            installAssets(context, coreIDs)
-        } catch (e: Throwable) {
-            log("Error while installing assets: ${e.message}")
-        }
-
-        return installSession
     }
 
     private fun computePlayModuleName(it: CoreID) = "lemuroid_core_${it.coreName}"

@@ -108,14 +108,14 @@ class GameLoader(
 
                 val quickSaveData =
                     runCatching {
-                        val shouldDiscardSave =
+                        val shouldKeepAutoSave =
                             !savesCoherencyEngine.shouldDiscardAutoSaveState(
                                 game,
                                 systemCoreConfig.coreID,
                                 saveRAM.timestampOverride,
                             )
 
-                        if (systemCoreConfig.statesSupported && loadSave && shouldDiscardSave) {
+                        if (systemCoreConfig.statesSupported && loadSave && shouldKeepAutoSave) {
                             statesManager.getAutoSave(game, systemCoreConfig.coreID)
                         } else {
                             null

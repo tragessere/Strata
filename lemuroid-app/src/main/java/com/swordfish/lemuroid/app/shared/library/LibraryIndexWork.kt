@@ -32,7 +32,7 @@ class LibraryIndexWork(
             }
 
         result.exceptionOrNull()?.let {
-            Timber.e("Library indexing work terminated with an exception:", it)
+            Timber.e(it, "Library indexing work terminated with an exception")
         }
 
         LibraryIndexScheduler.scheduleCoreUpdate(applicationContext)

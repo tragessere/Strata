@@ -37,6 +37,11 @@ class DirectoriesManager(
             mkdirs()
         }
 
+    fun getCoversDirectory(): File =
+        File(appContext.getExternalFilesDir(null), "covers").apply {
+            mkdirs()
+        }
+
     fun getInternalRomsDirectory(): File =
         File(appContext.getExternalFilesDir(null), "roms").apply {
             mkdirs()

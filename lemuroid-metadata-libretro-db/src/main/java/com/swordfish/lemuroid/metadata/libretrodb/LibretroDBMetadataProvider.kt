@@ -5,6 +5,7 @@ import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadata
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
+import com.swordfish.lemuroid.lib.library.metadata.LibretroCoverUrls
 import com.swordfish.lemuroid.lib.storage.StorageFile
 import com.swordfish.lemuroid.metadata.libretrodb.db.LibretroDBManager
 import com.swordfish.lemuroid.metadata.libretrodb.db.LibretroDatabase
@@ -15,10 +16,6 @@ import java.util.Locale
 class LibretroDBMetadataProvider(
     private val ovgdbManager: LibretroDBManager,
 ) : GameMetadataProvider {
-    companion object {
-        private val THUMB_REPLACE = Regex("[&*/:`<>?\\\\|]")
-    }
-
     private val sortedSystemIds: List<String> by lazy {
         SystemID
             .values()
@@ -55,7 +52,7 @@ class LibretroDBMetadataProvider(
         return GameMetadata(
             name = rom.name,
             romName = rom.romName,
-            thumbnail = computeCoverUrl(system, rom.name),
+            thumbnail = LibretroCoverUrls.forGameName(system, rom.name),
             system = rom.system,
             developer = rom.developer,
         )
@@ -161,26 +158,4 @@ class LibretroDBMetadataProvider(
     }
 
     private fun extractGameSystem(rom: LibretroRom): GameSystem = GameSystem.findById(rom.system!!)
-
-    private fun computeCoverUrl(
-        system: GameSystem,
-        name: String?,
-    ): String? {
-        var systemName = system.libretroFullName
-
-        // Specific mame version don't have any thumbnails in Libretro database
-        if (system.id == SystemID.MAME2003PLUS) {
-            systemName = "MAME"
-        }
-
-        if (name == null) {
-            return null
-        }
-
-        val imageType = "Named_Boxarts"
-
-        val thumbGameName = name.replace(THUMB_REPLACE, "_")
-
-        return "http://thumbnails.libretro.com/$systemName/$imageType/$thumbGameName.png"
-    }
 }

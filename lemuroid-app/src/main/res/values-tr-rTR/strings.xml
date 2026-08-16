@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Daha uygun, ama ağır ve daha az güvenilir. Hangi çekirdekleri/sistemleri eşitlemek istediğinizi seçin</string>
     <string name="game_context_menu_add_to_favorites">Favorilere Ekle</string>
     <string name="game_context_menu_remove_from_favorites">Favorilerden Kaldır</string>
-    <string name="game_context_menu_resume">Devam Et</string>
     <string name="game_context_menu_restart">Yeniden Başlat</string>
     <string name="game_context_menu_create_shortcut">Ana Ekrana Sabitle</string>
     <string name="home_notification_title">Bildirimleri Aç</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Kontroller</string>
     <string name="core_settings_controller">%1$s Kontrolleri</string>
     <string name="game_menu_title">Oyun Menüsü</string>
+    <string name="game_menu_resume">Devam Et</string>
     <string name="notification_channel_name">Tüm Bildirimler</string>
     <string name="library_index_notification_title">ROMları tarama devam ediyor</string>
     <string name="library_index_notification_message">Bu birkaç dakika sürebilir</string>

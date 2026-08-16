@@ -12,6 +12,7 @@ import coil.request.ImageRequest
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.swordfish.lemuroid.app.shared.covers.CoverUtils
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 
 @Composable
 fun LemuroidGameImage(
@@ -31,7 +32,7 @@ fun LemuroidGameImage(
                 .Builder(LocalContext.current)
                 .data(game.coverFrontUrl)
                 .build(),
-        contentDescription = game.title,
+        contentDescription = game.displayTitle,
         modifier =
             modifier
                 .fillMaxWidth()

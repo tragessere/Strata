@@ -77,7 +77,6 @@
     <string name="settings_save_sync_include_states_description">Více pohodlné, ale těžší a méně spolehlivé. Vyberte si jádro/systémy, které chcete synchronizovat</string>
     <string name="game_context_menu_add_to_favorites">Přidat do oblíbených</string>
     <string name="game_context_menu_remove_from_favorites">Odebrat z oblíbených</string>
-    <string name="game_context_menu_resume">Pokračovat</string>
     <string name="game_context_menu_restart">Restartovat</string>
     <string name="game_context_menu_create_shortcut">Připnout do launcheru</string>
     <string name="home_notification_title">Povolit oznámení</string>
@@ -115,6 +114,7 @@
     <string name="core_settings_category_controllers">Ovladače</string>
     <string name="core_settings_controller">Ovladač %1$s</string>
     <string name="game_menu_title">Herní menu</string>
+    <string name="game_menu_resume">Pokračovat</string>
     <string name="notification_channel_name">Všechna oznámení</string>
     <string name="library_index_notification_title">Probíhá skenování ROM</string>
     <string name="library_index_notification_message">Může to trvat několik minut</string>

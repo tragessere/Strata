@@ -10,3 +10,5 @@ from the [Delta emulator](https://github.com/rileytestut/delta) on iOS.
 - Support for setting custom artwork for game covers
 - Added support for Delta skins (only covers systems that Delta supports)
 - Removed notification permissions
+- Added ability to resolve save data sync conflicts
+- Added options for deleting and importing game data 

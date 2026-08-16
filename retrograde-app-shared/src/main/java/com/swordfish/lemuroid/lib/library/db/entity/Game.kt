@@ -43,6 +43,7 @@ data class Game(
     val fileName: String,
     val fileUri: String,
     val title: String,
+    val customTitle: String? = null,
     val systemId: String,
     val developer: String?,
     val coverFrontUrl: String?,
@@ -65,3 +66,17 @@ data class Game(
             }
     }
 }
+
+/**
+ * The name to show for a game: the one the user gave it, falling back to the one it was indexed
+ * under.
+ *
+ * Everything which puts a game in front of the user should read this rather than [Game.title]. The
+ * exceptions are the places which use the name to look something up, such as the cover urls in
+ * `LemuroidLibrary` and the bios matching, since those have to keep asking about the original rom.
+ *
+ * A blank custom name reads as no custom name, so clearing the field in the rename dialog puts the
+ * indexed name back rather than leaving the game with nothing to show.
+ */
+val Game.displayTitle: String
+    get() = customTitle?.takeIf { it.isNotBlank() } ?: title

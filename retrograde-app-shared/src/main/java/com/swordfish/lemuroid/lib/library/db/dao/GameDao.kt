@@ -39,11 +39,14 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE lastIndexedAt < :lastIndexedAt")
     fun selectByLastIndexedAtLessThan(lastIndexedAt: Long): List<Game>
 
-    @Query("SELECT * FROM games WHERE isFavorite = 1 ORDER BY title ASC")
+    @Query("SELECT * FROM games WHERE isFavorite = 1 ORDER BY COALESCE(NULLIF(customTitle, ''), title) ASC")
     fun selectFavorites(): PagingSource<Int, Game>
 
-    @Query("SELECT * FROM games ORDER BY title ASC, id DESC")
+    @Query("SELECT * FROM games ORDER BY COALESCE(NULLIF(customTitle, ''), title) ASC, id DESC")
     fun selectAll(): Flow<List<Game>>
+
+    @Query("SELECT * FROM games")
+    suspend fun asyncSelectAll(): List<Game>
 
     @Query(
         """
@@ -64,10 +67,20 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE lastPlayedAt IS NULL LIMIT :limit")
     fun selectFirstNotPlayed(limit: Int): Flow<List<Game>>
 
-    @Query("SELECT * FROM games WHERE systemId = :systemId ORDER BY title ASC, id DESC")
+    @Query(
+        """
+        SELECT * FROM games WHERE systemId = :systemId
+            ORDER BY COALESCE(NULLIF(customTitle, ''), title) ASC, id DESC
+        """,
+    )
     fun selectBySystem(systemId: String): PagingSource<Int, Game>
 
-    @Query("SELECT * FROM games WHERE systemId IN (:systemIds) ORDER BY title ASC, id DESC")
+    @Query(
+        """
+        SELECT * FROM games WHERE systemId IN (:systemIds)
+            ORDER BY COALESCE(NULLIF(customTitle, ''), title) ASC, id DESC
+        """,
+    )
     fun selectBySystems(systemIds: List<String>): PagingSource<Int, Game>
 
     @Query("SELECT DISTINCT systemId FROM games ORDER BY systemId ASC")

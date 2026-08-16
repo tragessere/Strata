@@ -29,19 +29,25 @@ class GameLaunchTaskHandler(
     ) {
         rescheduleBackgroundWork(activity.applicationContext)
         when (resultCode) {
-            Activity.RESULT_OK -> handleSuccessfulGameFinish(activity, enableRatingFlow, data)
-            BaseGameActivity.RESULT_ERROR ->
+            Activity.RESULT_OK -> {
+                handleSuccessfulGameFinish(activity, enableRatingFlow, data)
+            }
+
+            BaseGameActivity.RESULT_ERROR -> {
                 handleUnsuccessfulGameFinish(
                     activity,
                     data?.getStringExtra(BaseGameActivity.PLAY_GAME_RESULT_ERROR)!!,
                     null,
                 )
-            BaseGameActivity.RESULT_UNEXPECTED_ERROR ->
+            }
+
+            BaseGameActivity.RESULT_UNEXPECTED_ERROR -> {
                 handleUnsuccessfulGameFinish(
                     activity,
                     activity.getString(R.string.lemuroid_crash_disclamer),
                     data?.getStringExtra(BaseGameActivity.PLAY_GAME_RESULT_ERROR),
                 )
+            }
         }
     }
 
@@ -52,8 +58,7 @@ class GameLaunchTaskHandler(
     }
 
     private fun rescheduleBackgroundWork(context: Context) {
-        // Let's slightly delay the sync. Maybe the user wants to play another game.
-        SaveSyncWork.enqueueAutoWork(context, 5)
+        SaveSyncWork.enqueueAutoWork(context)
         CacheCleanerWork.enqueueCleanCacheLRU(context)
     }
 

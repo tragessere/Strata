@@ -108,6 +108,12 @@ enum class MainRoute(
         parent = SETTINGS,
         showTopLevelActions = false,
     ),
+    SETTINGS_SAVE_SYNC_CONFLICTS(
+        route = "settings/savesync/conflicts",
+        titleId = R.string.settings_title_save_sync_conflicts,
+        parent = SETTINGS_SAVE_SYNC,
+        showTopLevelActions = false,
+    ),
     ;
 
     val root = root()

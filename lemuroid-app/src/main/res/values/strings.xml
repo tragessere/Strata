@@ -108,13 +108,68 @@
     <string name="settings_save_sync_include_states">Sync states</string>
     <string name="settings_save_sync_include_states_description">More convenient, but heavier and less reliable. Choose which cores/systems you want to sync</string>
 
+    <string name="settings_title_save_sync_conflicts">Resolve conflicts</string>
+    <string name="settings_save_sync_conflicts">Conflicts</string>
+    <plurals name="settings_save_sync_conflicts_description">
+        <item quantity="one">%1$d save changed on this device and in the cloud. Choose which to keep</item>
+        <item quantity="other">%1$d saves changed on this device and in the cloud. Choose which to keep</item>
+    </plurals>
+    <string name="settings_save_sync_conflicts_none">No conflicts to resolve</string>
+    <string name="save_sync_conflicts_explanation">These files were changed on this device and in the cloud. Pick which one you would like to use.</string>
+    <string name="save_sync_conflicts_keep_local">This device</string>
+    <string name="save_sync_conflicts_keep_remote">Cloud data</string>
+    <string name="save_sync_conflicts_apply">Apply and sync</string>
+    <string name="save_sync_conflicts_detail">%1$s · %2$s</string>
+    <string name="save_sync_conflicts_kind_save_data">Save data</string>
+    <string name="save_sync_conflicts_kind_slot">Slot %1$d</string>
+    <string name="save_sync_conflicts_kind_cover">Cover image</string>
+    <string name="save_sync_conflicts_kind_other">Synced file</string>
+
+    <string name="game_launch_conflict_title">Save Conflict</string>
+    <string name="game_launch_conflict_message">This game\'s saved data was changed on this device and in the cloud. Pick which one you would like to use.</string>
+    <string name="game_launch_conflict_apply">Sync and play</string>
+    <string name="game_launch_conflict_later">Decide later</string>
+    <string name="game_launch_conflict_syncing">Syncing game data…</string>
+    <string name="game_launch_conflict_unresolved">The conflict could not be resolved. Check your connection and your sync settings, or open the game with the copy already on this device.</string>
+    <string name="game_launch_conflict_open_anyway">Open anyway</string>
+    <string name="game_launch_conflict_stop_waiting">Dismiss</string>
+    <string name="game_launch_conflict_cancel">Cancel</string>
+    <string name="game_launch_conflict_toast_resolved">Save conflict resolved</string>
+    <string name="game_launch_conflict_toast_unresolved">Save conflict could not be resolved</string>
+
     <string name="game_context_menu_add_to_favorites">Add to favorites</string>
     <string name="game_context_menu_remove_from_favorites">Remove from favorites</string>
-    <string name="game_context_menu_resume">Resume</string>
     <string name="game_context_menu_restart">Restart</string>
     <string name="game_context_menu_create_shortcut">Pin to launcher</string>
     <string name="game_context_menu_change_artwork">Change artwork</string>
+    <string name="game_context_menu_import_save">Import save</string>
+    <string name="game_context_menu_rename">Rename</string>
+    <string name="game_context_menu_manage_data">Manage data</string>
+    <string name="game_rename_title">Rename game</string>
+    <string name="game_rename_label">Name</string>
+    <string name="game_rename_supporting">Leave empty to restore \"%1$s\"</string>
+    <string name="game_rename_confirm">Rename</string>
     <string name="game_interactor_custom_artwork_failed">Unable to set custom artwork</string>
+    <string name="game_interactor_import_save_succeeded">Save imported</string>
+    <string name="game_interactor_import_save_failed">Unable to import the save file</string>
+    <string name="game_interactor_import_save_unsupported">Only .srm save files can be imported</string>
+
+    <string name="game_import_save_replace_title">Replace existing save?</string>
+    <string name="game_import_save_replace_message">%1$s already has a save file. The old save file cannot be recovered after it is replaced.</string>
+    <string name="game_import_save_replace_confirm">Replace</string>
+
+    <string name="game_manage_data_title">Manage data</string>
+    <string name="game_manage_data_back">Back</string>
+    <string name="game_manage_data_empty">Strata is not storing any data for this game.</string>
+    <string name="game_manage_data_artwork">Custom artwork</string>
+    <string name="game_manage_data_saves">Save data</string>
+    <string name="game_manage_data_states">Save states</string>
+    <string name="game_manage_data_extracted_rom">Cached game copy</string>
+    <string name="game_manage_data_delete">Delete</string>
+    <string name="game_manage_data_confirm_title">Delete selected data?</string>
+    <string name="game_manage_data_confirm_message">%1$s will be freed. Save data and save states cannot be recovered, and are also removed from any synced copy.</string>
+    <string name="game_manage_data_deleted">Freed %1$s</string>
+    <string name="game_manage_data_delete_failed">Some data could not be deleted</string>
 
     <string name="home_notification_title">Enable notifications</string>
     <string name="home_notification_message">Strata uses notifications to let you know when a game or operation is running in background.</string>

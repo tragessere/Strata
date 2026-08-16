@@ -47,6 +47,12 @@ class TVSettingsFragment : LeanbackPreferenceFragmentCompat() {
 
     lateinit var saveSyncPreferences: SaveSyncPreferences
 
+    /**
+     * Last state seen by the collector below, kept so a refresh triggered from somewhere else does
+     * not have to invent an answer and re-enable rows out from under a running sync.
+     */
+    private var isSaveSyncInProgress = false
+
     override fun onAttach(context: Context) {
         AndroidSupportInjection.inject(this)
 
@@ -86,6 +92,7 @@ class TVSettingsFragment : LeanbackPreferenceFragmentCompat() {
                 PendingOperationsMonitor(requireContext())
                     .anySaveOperationInProgress()
                     .safeCollect { syncInProgress ->
+                        isSaveSyncInProgress = syncInProgress
                         saveSyncPreferences.updatePreferences(screen, syncInProgress)
                     }
             }
@@ -165,9 +172,14 @@ class TVSettingsFragment : LeanbackPreferenceFragmentCompat() {
         }
     }
 
+    /**
+     * Picks up a linked account changed by the provider's sign in/out activity. The sync state is
+     * carried over from the collector rather than assumed idle, since resuming mid sync would
+     * otherwise re-enable every row until the next emission.
+     */
     private fun refreshSaveSyncScreen() {
         getSaveSyncScreen()?.let {
-            saveSyncPreferences.updatePreferences(it, false)
+            saveSyncPreferences.updatePreferences(it, isSaveSyncInProgress)
         }
     }
 

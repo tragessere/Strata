@@ -22,6 +22,7 @@ package com.swordfish.lemuroid.app
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.room.Room
+import com.swordfish.lemuroid.BuildConfig
 import com.swordfish.lemuroid.app.mobile.feature.game.GameActivity
 import com.swordfish.lemuroid.app.mobile.feature.game.GameService
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.GameMenuActivity
@@ -59,12 +60,16 @@ import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 import com.swordfish.lemuroid.lib.library.skin.DeltaSkinManager
 import com.swordfish.lemuroid.lib.migration.DesmumeMigrationHandler
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
+import com.swordfish.lemuroid.lib.saves.SaveImporter
 import com.swordfish.lemuroid.lib.saves.SavesCoherencyEngine
 import com.swordfish.lemuroid.lib.saves.SavesManager
 import com.swordfish.lemuroid.lib.saves.StatesManager
 import com.swordfish.lemuroid.lib.saves.StatesPreviewManager
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
+import com.swordfish.lemuroid.lib.savesync.SyncInstalledSavesStore
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
+import com.swordfish.lemuroid.lib.storage.GameCoversManager
+import com.swordfish.lemuroid.lib.storage.GameFilesManager
 import com.swordfish.lemuroid.lib.storage.StorageProvider
 import com.swordfish.lemuroid.lib.storage.StorageProviderRegistry
 import com.swordfish.lemuroid.lib.storage.local.LocalStorageProvider
@@ -81,6 +86,7 @@ import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Converter
 import retrofit2.Retrofit
+import java.io.File
 import java.io.InputStream
 import java.lang.reflect.Type
 import java.util.concurrent.TimeUnit
@@ -125,40 +131,34 @@ abstract class LemuroidApplicationModule {
     @ContributesAndroidInjector(modules = [GamePadShortcutBindingActivity.Module::class])
     abstract fun gamepadShortcutBindingActivity(): GamePadShortcutBindingActivity
 
-    @Module
     companion object {
         @Provides
         @PerApp
-        @JvmStatic
         fun libretroDBManager(app: LemuroidApplication) = LibretroDBManager(app)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun retrogradeDb(app: LemuroidApplication) =
             Room
                 .databaseBuilder(app, RetrogradeDatabase::class.java, RetrogradeDatabase.DB_NAME)
                 .addCallback(GameSearchDao.CALLBACK)
-                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9)
+                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9, Migrations.VERSION_9_10)
                 .fallbackToDestructiveMigration()
                 .build()
 
         @Provides
         @PerApp
-        @JvmStatic
         fun gameMetadataProvider(libretroDBManager: LibretroDBManager): GameMetadataProvider =
             LibretroDBMetadataProvider(libretroDBManager)
 
         @Provides
         @PerApp
         @IntoSet
-        @JvmStatic
         fun localSAFStorageProvider(context: Context): StorageProvider = StorageAccessFrameworkProvider(context)
 
         @Provides
         @PerApp
         @IntoSet
-        @JvmStatic
         fun localGameStorageProvider(
             context: Context,
             directoriesManager: DirectoriesManager,
@@ -166,7 +166,6 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun gameStorageProviderRegistry(
             context: Context,
             providers: Set<@JvmSuppressWildcards StorageProvider>,
@@ -174,17 +173,29 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun lemuroidLibrary(
             db: RetrogradeDatabase,
             storageProviderRegistry: Lazy<StorageProviderRegistry>,
             gameMetadataProvider: Lazy<GameMetadataProvider>,
             biosManager: BiosManager,
-        ) = LemuroidLibrary(db, storageProviderRegistry, gameMetadataProvider, biosManager)
+            gameCoversManager: GameCoversManager,
+        ) = LemuroidLibrary(db, storageProviderRegistry, gameMetadataProvider, biosManager, gameCoversManager)
 
         @Provides
         @PerApp
-        @JvmStatic
+        fun gameCoversManager(directoriesManager: DirectoriesManager) = GameCoversManager(directoriesManager)
+
+        @Provides
+        @PerApp
+        fun gameFilesManager(
+            context: Context,
+            directoriesManager: DirectoriesManager,
+            db: RetrogradeDatabase,
+            lemuroidLibrary: LemuroidLibrary,
+        ) = GameFilesManager(context, directoriesManager, db, lemuroidLibrary)
+
+        @Provides
+        @PerApp
         fun okHttpClient(): OkHttpClient =
             OkHttpClient
                 .Builder()
@@ -194,7 +205,6 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun retrofit(): Retrofit =
             Retrofit
                 .Builder()
@@ -223,12 +233,10 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun directoriesManager(context: Context) = DirectoriesManager(context)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun deltaSkinManager(
             context: Context,
             directoriesManager: DirectoriesManager,
@@ -236,41 +244,47 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun controllerSkinPreferences(sharedPreferences: SharedPreferences) =
             ControllerSkinPreferences(sharedPreferences)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun statesManager(directoriesManager: DirectoriesManager) = StatesManager(directoriesManager)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun savesManager(directoriesManager: DirectoriesManager) = SavesManager(directoriesManager)
 
         @Provides
         @PerApp
-        @JvmStatic
+        fun saveImporter(
+            savesManager: SavesManager,
+            syncInstalledSaves: SyncInstalledSavesStore,
+        ) = SaveImporter(savesManager, syncInstalledSaves)
+
+        @Provides
+        @PerApp
         fun statesPreviewManager(directoriesManager: DirectoriesManager) = StatesPreviewManager(directoriesManager)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun coreManager(
             directoriesManager: DirectoriesManager,
             retrofit: Retrofit,
-        ): CoreUpdater = CoreUpdaterImpl(directoriesManager, retrofit)
+        ): CoreUpdater =
+            CoreUpdaterImpl(
+                directoriesManager,
+                retrofit,
+                // Set by the cores flavor dimension, which the ext modules cannot see themselves.
+                coreLibrariesBundled = BuildConfig.CORE_LIBRARIES_BUNDLED,
+            )
 
         @Provides
         @PerApp
-        @JvmStatic
         fun coreVariablesManager(sharedPreferences: Lazy<SharedPreferences>) = CoreVariablesManager(sharedPreferences)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun gameLoader(
             lemuroidLibrary: LemuroidLibrary,
             statesManager: StatesManager,
@@ -295,7 +309,6 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun inputDeviceManager(
             context: Context,
             sharedPreferences: Lazy<SharedPreferences>,
@@ -303,17 +316,14 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun biosManager(directoriesManager: DirectoriesManager) = BiosManager(directoriesManager)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun biosPreferences(biosManager: BiosManager) = BiosPreferences(biosManager)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun coresSelection(
             sharedPreferences: Lazy<SharedPreferences>,
             desmumeMigrationHandler: DesmumeMigrationHandler,
@@ -321,28 +331,40 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun coreSelectionPreferences() = CoresSelectionPreferences()
 
         @Provides
         @PerApp
-        @JvmStatic
         fun savesCoherencyEngine(
             savesManager: SavesManager,
             statesManager: StatesManager,
-        ) = SavesCoherencyEngine(savesManager, statesManager)
+            syncInstalledSaves: SyncInstalledSavesStore,
+        ) = SavesCoherencyEngine(savesManager, statesManager, syncInstalledSaves)
+
+        /**
+         * Shared by the sync and the save import which write it and the game launch which reads it.
+         * The readers run in a different process from the writers, so this provides one instance per
+         * process rather than one overall, which is fine because the two writers are in the same one.
+         */
+        @Provides
+        @PerApp
+        fun syncInstalledSavesStore(
+            context: Context,
+            directoriesManager: DirectoriesManager,
+        ) = SyncInstalledSavesStore(
+            File(context.filesDir, SyncInstalledSavesStore.INSTALLED_SAVES_FILE_NAME),
+        ) { directoriesManager.getSavesDirectory() }
 
         @Provides
         @PerApp
-        @JvmStatic
         fun saveSyncManagerImpl(
             context: Context,
             directoriesManager: DirectoriesManager,
-        ) = SaveSyncManagerImpl(context, directoriesManager)
+            syncInstalledSaves: SyncInstalledSavesStore,
+        ) = SaveSyncManagerImpl(context, directoriesManager, syncInstalledSaves)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun desmumeMigrationHandler(directoriesManager: DirectoriesManager) =
             DesmumeMigrationHandler(directoriesManager)
 
@@ -354,7 +376,6 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun shortcutsGenerator(
             context: Context,
             retrofit: Retrofit,
@@ -362,7 +383,6 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun channelHandler(
             context: Context,
             retrogradeDatabase: RetrogradeDatabase,
@@ -371,13 +391,11 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun retroControllerManager(sharedPreferences: Lazy<SharedPreferences>) =
             ControllerConfigsManager(sharedPreferences)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun settingsManager(
             context: Context,
             sharedPreferences: Lazy<SharedPreferences>,
@@ -385,12 +403,10 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun sharedPreferences(context: Context) = SharedPreferencesHelper.getSharedPreferences(context)
 
         @Provides
         @PerApp
-        @JvmStatic
         fun gameLauncher(
             coresSelection: CoresSelection,
             gameLaunchTaskHandler: GameLaunchTaskHandler,
@@ -398,7 +414,6 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        @JvmStatic
         fun rumbleManager(
             context: Context,
             settingsManager: SettingsManager,

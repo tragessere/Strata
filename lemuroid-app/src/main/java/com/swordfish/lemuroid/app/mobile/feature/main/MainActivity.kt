@@ -3,7 +3,9 @@ package com.swordfish.lemuroid.app.mobile.feature.main
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
+import android.text.format.Formatter
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,9 +26,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -46,6 +50,8 @@ import com.swordfish.lemuroid.app.mobile.feature.settings.general.SettingsScreen
 import com.swordfish.lemuroid.app.mobile.feature.settings.general.SettingsViewModel
 import com.swordfish.lemuroid.app.mobile.feature.settings.inputdevices.InputDevicesSettingsScreen
 import com.swordfish.lemuroid.app.mobile.feature.settings.inputdevices.InputDevicesSettingsViewModel
+import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncConflictsScreen
+import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncConflictsViewModel
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncSettingsScreen
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncSettingsViewModel
 import com.swordfish.lemuroid.app.mobile.feature.settings.skins.ControllerSkinsScreen
@@ -64,6 +70,7 @@ import com.swordfish.lemuroid.app.shared.main.BusyActivity
 import com.swordfish.lemuroid.app.shared.main.GameLaunchTaskHandler
 import com.swordfish.lemuroid.app.shared.settings.SettingsInteractor
 import com.swordfish.lemuroid.common.coroutines.safeLaunch
+import com.swordfish.lemuroid.common.displayToast
 import com.swordfish.lemuroid.ext.feature.review.ReviewManager
 import com.swordfish.lemuroid.lib.android.RetrogradeComponentActivity
 import com.swordfish.lemuroid.lib.bios.BiosManager
@@ -73,15 +80,20 @@ import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.LemuroidLibrary
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 import com.swordfish.lemuroid.lib.library.skin.DeltaSkinManager
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
+import com.swordfish.lemuroid.lib.saves.SaveImporter
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
+import com.swordfish.lemuroid.lib.storage.GameFilesManager
 import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
 import dagger.Provides
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 private const val TABLET_SMALLEST_WIDTH_DP = 600
@@ -102,6 +114,9 @@ class MainActivity :
 
     @Inject
     lateinit var gameInteractor: GameInteractor
+
+    @Inject
+    lateinit var gameFilesManager: GameFilesManager
 
     @Inject
     lateinit var biosManager: BiosManager
@@ -125,6 +140,10 @@ class MainActivity :
 
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(applicationContext, saveSyncManager)
+    }
+
+    private val gameLaunchConflictViewModel: GameLaunchConflictViewModel by viewModels {
+        GameLaunchConflictViewModel.Factory(application, saveSyncManager)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -213,8 +232,77 @@ class MainActivity :
                 pickArtworkLauncher.launch("image/*")
             }
 
-            val onGameClick = { game: Game ->
-                gameInteractor.onGamePlay(game)
+            // Saved rather than merely remembered, because the picker is a separate activity and this
+            // one can be recreated behind it. Restoring it as an ordinary state would leave the result
+            // arriving with nothing to apply it to, and the import would silently do nothing.
+            val importSaveTargetGameState =
+                rememberSaveable {
+                    mutableStateOf<Game?>(null)
+                }
+
+            // Set only once the import has found a save already in place, which is the one case the
+            // user has to answer for. It holds the picked file too, since the answer arrives long
+            // after the picker has closed, and is saved so a rotation does not take the question and
+            // the pick behind it away.
+            val replaceSaveRequestState =
+                rememberSaveable {
+                    mutableStateOf<ImportSaveReplaceRequest?>(null)
+                }
+
+            val importSave = { game: Game, saveUri: Uri, replaceExisting: Boolean ->
+                gameInteractor.onImportSave(game, saveUri, replaceExisting) {
+                    replaceSaveRequestState.value = ImportSaveReplaceRequest(game, saveUri.toString())
+                }
+            }
+
+            // Picked with an explicit "any type" filter rather than a mime type: save files have none
+            // of their own, so a filtered picker would hide the very files being looked for. The
+            // interactor turns away anything which is not a save.
+            val pickSaveLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { saveUri ->
+                    val targetGame = importSaveTargetGameState.value
+                    if (saveUri != null && targetGame != null) {
+                        importSave(targetGame, saveUri, false)
+                    }
+                    importSaveTargetGameState.value = null
+                }
+
+            val onImportSave = { game: Game ->
+                importSaveTargetGameState.value = game
+                pickSaveLauncher.launch(arrayOf("*/*"))
+            }
+
+            // Saved so a rotation while the keyboard is up does not take away the game the typed
+            // name is meant for. The dialog saves what has been typed so far on its own.
+            val renameTargetGameState =
+                rememberSaveable {
+                    mutableStateOf<Game?>(null)
+                }
+
+            val onRename = { game: Game ->
+                renameTargetGameState.value = game
+            }
+
+            // Both go through the conflict gate, which takes over whenever the game has a save the
+            // user has not yet chosen a copy for. It answers false when there is nothing to ask,
+            // which is every launch that does not involve a conflict.
+            //
+            // A sync already running comes first, though. It is in the middle of moving the very
+            // copies the question is about, so any list the dialog could show is one edit behind, and
+            // an answer given against it would be applied to files which have since changed. Falling
+            // straight through to the interactor lets it turn the launch away with the usual "wait
+            // for the pending operations to complete" toast, and the question is asked on the next
+            // attempt, once the sync is done.
+            val onGamePlay = { game: Game ->
+                if (isBusy() || !gameLaunchConflictViewModel.interceptLaunch(game, loadSave = true)) {
+                    gameInteractor.onGamePlay(game)
+                }
+            }
+
+            val onGameRestart = { game: Game ->
+                if (isBusy() || !gameLaunchConflictViewModel.interceptLaunch(game, loadSave = false)) {
+                    gameInteractor.onGameRestart(game)
+                }
             }
 
             val onGameFavoriteToggle = { game: Game, isFavorite: Boolean ->
@@ -290,7 +378,7 @@ class MainActivity :
                                         ),
                                 ),
                             searchQuery = mainUIState.searchQuery,
-                            onGameClick = onGameClick,
+                            onGameClick = onGamePlay,
                             onGameLongClick = onGameLongClick,
                             onOpenCoreSelection = { navController.navigateToRoute(MainRoute.SETTINGS_CORES_SELECTION) },
                         )
@@ -375,6 +463,21 @@ class MainActivity :
                                             saveSyncManager,
                                         ),
                                 ),
+                            navController = navController,
+                        )
+                    }
+                    composable(MainRoute.SETTINGS_SAVE_SYNC_CONFLICTS) {
+                        SaveSyncConflictsScreen(
+                            modifier = Modifier.padding(padding),
+                            viewModel =
+                                viewModel(
+                                    factory =
+                                        SaveSyncConflictsViewModel.Factory(
+                                            application,
+                                            saveSyncManager,
+                                            retrogradeDb,
+                                        ),
+                                ),
                         )
                     }
                     composable(MainRoute.SETTINGS_CONTROLLER_SKINS) {
@@ -437,20 +540,101 @@ class MainActivity :
             MainGameContextActions(
                 selectedGameState = selectedGameState,
                 shortcutSupported = gameInteractor.supportShortcuts(),
-                onGamePlay = { gameInteractor.onGamePlay(it) },
-                onGameRestart = { gameInteractor.onGameRestart(it) },
+                onGameRestart = onGameRestart,
                 onFavoriteToggle = { game: Game, isFavorite: Boolean ->
                     gameInteractor.onFavoriteToggle(game, isFavorite)
                 },
                 onCreateShortcut = { gameInteractor.onCreateShortcut(it) },
                 onChangeArtwork = onChangeArtwork,
+                onImportSave = onImportSave,
+                onRename = onRename,
+                loadDataSizes = { gameFilesManager.computeSizes(it) },
+                onDeleteData = { game, types -> deleteGameData(game, types) },
             )
+
+            renameTargetGameState.value?.let { game ->
+                GameRenameDialog(
+                    game = game,
+                    onConfirm = { customTitle ->
+                        renameTargetGameState.value = null
+                        gameInteractor.onRename(game, customTitle)
+                    },
+                    onCancel = { renameTargetGameState.value = null },
+                )
+            }
+
+            replaceSaveRequestState.value?.let { request ->
+                GameImportSaveReplaceDialog(
+                    gameTitle = request.game.displayTitle,
+                    onConfirm = {
+                        replaceSaveRequestState.value = null
+                        importSave(request.game, request.saveUri.toUri(), true)
+                    },
+                    onCancel = { replaceSaveRequestState.value = null },
+                )
+            }
+
+            GameLaunchConflictDialog(viewModel = gameLaunchConflictViewModel)
+
+            // A launch which came through the dialog waits here for the sync it triggered to be out
+            // of the way, since the emulator is about to read the very files it was writing.
+            val approvedLaunch = gameLaunchConflictViewModel.approvedLaunch.collectAsState().value
+            LaunchedEffect(approvedLaunch, mainUIState.operationInProgress) {
+                if (approvedLaunch == null || mainUIState.operationInProgress) {
+                    return@LaunchedEffect
+                }
+                gameLaunchConflictViewModel.consumeApprovedLaunch()
+                if (approvedLaunch.loadSave) {
+                    gameInteractor.onGamePlay(approvedLaunch.game)
+                } else {
+                    gameInteractor.onGameRestart(approvedLaunch.game)
+                }
+            }
+
+            // A sync started from the dialog carries on after it is closed, and the progress bar
+            // going away is the only sign it finished. This is the one thing which says how it went.
+            val syncNotice = gameLaunchConflictViewModel.pendingNotice.collectAsState().value
+            LaunchedEffect(syncNotice) {
+                if (syncNotice == null) {
+                    return@LaunchedEffect
+                }
+                gameLaunchConflictViewModel.consumeNotice()
+                displayToast(
+                    when (syncNotice) {
+                        GameLaunchConflictViewModel.Notice.RESOLVED ->
+                            R.string.game_launch_conflict_toast_resolved
+                        GameLaunchConflictViewModel.Notice.UNRESOLVED ->
+                            R.string.game_launch_conflict_toast_unresolved
+                    },
+                )
+            }
         }
     }
 
     override fun activity(): Activity = this
 
     override fun isBusy(): Boolean = mainViewModel.state.value.operationInProgress ?: false
+
+    private fun deleteGameData(
+        game: Game,
+        types: Set<GameFilesManager.GameDataType>,
+    ) {
+        GlobalScope.safeLaunch {
+            val result = gameFilesManager.delete(game, types)
+
+            val message =
+                if (result.failedTypes.isNotEmpty()) {
+                    getString(R.string.game_manage_data_delete_failed)
+                } else {
+                    val freed = Formatter.formatFileSize(this@MainActivity, result.freedBytes)
+                    getString(R.string.game_manage_data_deleted, freed)
+                }
+
+            withContext(Dispatchers.Main) {
+                displayToast(message)
+            }
+        }
+    }
 
     override fun onActivityResult(
         requestCode: Int,
@@ -494,7 +678,16 @@ class MainActivity :
                 shortcutsGenerator: ShortcutsGenerator,
                 gameLauncher: GameLauncher,
                 lemuroidLibrary: LemuroidLibrary,
-            ) = GameInteractor(activity, retrogradeDb, false, shortcutsGenerator, gameLauncher, lemuroidLibrary)
+                saveImporter: SaveImporter,
+            ) = GameInteractor(
+                activity,
+                retrogradeDb,
+                false,
+                shortcutsGenerator,
+                gameLauncher,
+                lemuroidLibrary,
+                saveImporter,
+            )
         }
     }
 }

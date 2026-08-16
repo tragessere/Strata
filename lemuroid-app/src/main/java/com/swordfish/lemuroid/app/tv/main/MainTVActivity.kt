@@ -32,6 +32,7 @@ import com.swordfish.lemuroid.lib.injection.PerActivity
 import com.swordfish.lemuroid.lib.injection.PerFragment
 import com.swordfish.lemuroid.lib.library.LemuroidLibrary
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
+import com.swordfish.lemuroid.lib.saves.SaveImporter
 import dagger.Provides
 import dagger.android.ContributesAndroidInjector
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -133,7 +134,16 @@ class MainTVActivity :
                 shortcutsGenerator: ShortcutsGenerator,
                 gameLauncher: GameLauncher,
                 lemuroidLibrary: LemuroidLibrary,
-            ) = GameInteractor(activity, retrogradeDb, true, shortcutsGenerator, gameLauncher, lemuroidLibrary)
+                saveImporter: SaveImporter,
+            ) = GameInteractor(
+                activity,
+                retrogradeDb,
+                true,
+                shortcutsGenerator,
+                gameLauncher,
+                lemuroidLibrary,
+                saveImporter,
+            )
         }
     }
 }

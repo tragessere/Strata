@@ -10,7 +10,7 @@ import timber.log.Timber
 class MainProcessInitializer : Initializer<Unit> {
     override fun create(context: Context) {
         Timber.i("Requested initialization of main process tasks")
-        SaveSyncWork.enqueueAutoWork(context, 0)
+        SaveSyncWork.enqueueAutoWork(context)
         LibraryIndexScheduler.scheduleCoreUpdate(context)
     }
 

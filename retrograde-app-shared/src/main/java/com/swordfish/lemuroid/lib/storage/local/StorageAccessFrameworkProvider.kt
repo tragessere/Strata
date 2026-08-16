@@ -13,7 +13,6 @@ import com.swordfish.lemuroid.lib.library.db.entity.DataFile
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
 import com.swordfish.lemuroid.lib.storage.BaseStorageFile
-import com.swordfish.lemuroid.lib.storage.GameArtFiles
 import com.swordfish.lemuroid.lib.storage.RomFiles
 import com.swordfish.lemuroid.lib.storage.StorageFile
 import com.swordfish.lemuroid.lib.storage.StorageProvider
@@ -45,88 +44,6 @@ class StorageAccessFrameworkProvider(
 
     override fun getStorageFile(baseStorageFile: BaseStorageFile): StorageFile? =
         DocumentFileParser.parseDocumentFile(context, baseStorageFile)
-
-    override fun getGameArtUri(gameFileUri: Uri): Uri? {
-        return runCatching {
-            val treeUri = getExternalFolder()?.let { Uri.parse(it) } ?: return null
-            val gameDocumentId = DocumentsContract.getDocumentId(gameFileUri)
-
-            GameArtFiles.SUPPORTED_EXTENSIONS
-                .map { artDocumentId(gameDocumentId, it) }
-                .map { DocumentsContract.buildDocumentUriUsingTree(treeUri, it) }
-                .firstOrNull { DocumentFile.fromSingleUri(context, it)?.exists() == true }
-        }.getOrNull()
-    }
-
-    override fun writeGameArt(
-        gameFileUri: Uri,
-        imageExtension: String,
-        inputStream: InputStream,
-    ): Uri? {
-        return runCatching {
-            val treeUri = getExternalFolder()?.let { Uri.parse(it) } ?: return null
-            val gameDocumentId = DocumentsContract.getDocumentId(gameFileUri)
-
-            // Remove any pre-existing artwork so a single image (with the chosen extension) remains.
-            GameArtFiles.SUPPORTED_EXTENSIONS.forEach { extension ->
-                val existingUri =
-                    DocumentsContract.buildDocumentUriUsingTree(
-                        treeUri,
-                        artDocumentId(gameDocumentId, extension),
-                    )
-                runCatching {
-                    if (DocumentFile.fromSingleUri(context, existingUri)?.exists() == true) {
-                        DocumentsContract.deleteDocument(context.contentResolver, existingUri)
-                    }
-                }
-            }
-
-            val parentDocumentUri =
-                DocumentsContract.buildDocumentUriUsingTree(treeUri, parentDocumentId(gameDocumentId))
-            val displayName = "${baseName(gameDocumentId)}.$imageExtension"
-            val createdUri =
-                DocumentsContract.createDocument(
-                    context.contentResolver,
-                    parentDocumentUri,
-                    GameArtFiles.mimeTypeForExtension(imageExtension),
-                    displayName,
-                ) ?: return null
-
-            context.contentResolver.openOutputStream(createdUri)?.use { output ->
-                inputStream.use { input -> input.copyTo(output) }
-            }
-            createdUri
-        }.getOrNull()
-    }
-
-    private fun parentDocumentId(gameDocumentId: String): String {
-        val lastSlash = gameDocumentId.lastIndexOf('/')
-        return if (lastSlash >= 0) {
-            gameDocumentId.substring(0, lastSlash)
-        } else {
-            // Game sits at the volume root, e.g. "primary:game.gba" -> parent "primary:".
-            gameDocumentId.substringBefore(':') + ":"
-        }
-    }
-
-    private fun baseName(gameDocumentId: String): String {
-        val fileName =
-            if (gameDocumentId.contains('/')) {
-                gameDocumentId.substringAfterLast('/')
-            } else {
-                gameDocumentId.substringAfter(':')
-            }
-        return fileName.substringBeforeLast('.')
-    }
-
-    private fun artDocumentId(
-        gameDocumentId: String,
-        extension: String,
-    ): String {
-        val parent = parentDocumentId(gameDocumentId)
-        val separator = if (parent.endsWith(':')) "" else "/"
-        return "$parent$separator${baseName(gameDocumentId)}.$extension"
-    }
 
     private fun getExternalFolder(): String? {
         val prefString = context.getString(R.string.pref_key_extenral_folder)

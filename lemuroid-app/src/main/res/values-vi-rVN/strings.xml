@@ -74,7 +74,6 @@
     <string name="settings_save_sync_include_states_description">Thuận tiện hơn, nhưng nặng hơn và ít đáng tin cậy hơn. Hãy chọn những lõi/hệ thống mà bạn muốn đồng bộ</string>
     <string name="game_context_menu_add_to_favorites">Thêm vào mục yêu thích</string>
     <string name="game_context_menu_remove_from_favorites">Xóa khỏi mục yêu thích</string>
-    <string name="game_context_menu_resume">Tiếp tục</string>
     <string name="game_context_menu_restart">Bắt đầu lại</string>
     <string name="game_context_menu_create_shortcut">Ghim vào launcher</string>
     <string name="home_notification_title">Bật thông báo</string>
@@ -103,6 +102,7 @@
     <string name="core_settings_category_controllers">Điều khiển</string>
     <string name="core_settings_controller">Điều khiển %1$s</string>
     <string name="game_menu_title">Menu trò chơi</string>
+    <string name="game_menu_resume">Tiếp tục</string>
     <string name="notification_channel_name">Tất cả thông báo</string>
     <string name="library_index_notification_title">Đang quét các ROM</string>
     <string name="library_index_notification_message">Việc này có thể mất tối đa vài phút</string>

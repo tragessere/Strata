@@ -45,4 +45,17 @@ object Migrations {
                 )
             }
         }
+
+    val VERSION_9_10: Migration =
+        object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    ALTER TABLE `games` ADD COLUMN `customTitle` TEXT
+                    """.trimIndent(),
+                )
+
+                GameSearchDao.rebuildIndexForCustomTitle(database)
+            }
+        }
 }

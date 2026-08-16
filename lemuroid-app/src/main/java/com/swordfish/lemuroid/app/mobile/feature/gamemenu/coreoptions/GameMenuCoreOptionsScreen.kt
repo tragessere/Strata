@@ -1,6 +1,7 @@
 package com.swordfish.lemuroid.app.mobile.feature.gamemenu.coreoptions
 
 import android.content.Context
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +39,14 @@ fun GameMenuCoreOptionsScreen(
             gameMenuRequest.coreOptions + gameMenuRequest.advancedCoreOptions
         }
 
-    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+    // The options themselves are known up front, but the gamepad count arrives from a flow and can
+    // add controller rows a frame or two later. Animating keeps that from snapping the sheet.
+    Column(
+        modifier =
+            Modifier
+                .animateContentSize()
+                .verticalScroll(rememberScrollState()),
+    ) {
         CoreOptions(gameMenuRequest.game.systemId, allOptions, context)
         ControllersOptions(gameMenuRequest, maxOf(1, connectedGamePads), context)
     }

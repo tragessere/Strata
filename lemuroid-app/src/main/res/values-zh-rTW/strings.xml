@@ -74,7 +74,6 @@
     <string name="settings_save_sync_include_states_description">選擇要同步的核心/系統。(更加便利，但很不穩定。)</string>
     <string name="game_context_menu_add_to_favorites">加入最愛</string>
     <string name="game_context_menu_remove_from_favorites">移出最愛</string>
-    <string name="game_context_menu_resume">繼續遊戲</string>
     <string name="game_context_menu_restart">重新啟動</string>
     <string name="game_context_menu_create_shortcut">新增桌布捷徑</string>
     <string name="home_notification_title">啟用通知</string>
@@ -106,6 +105,7 @@
     <string name="core_settings_category_controllers">控制器</string>
     <string name="core_settings_controller">控制器 %1$s</string>
     <string name="game_menu_title">遊戲選單</string>
+    <string name="game_menu_resume">繼續遊戲</string>
     <string name="notification_channel_name">所有通知</string>
     <string name="library_index_notification_title">ROMs 掃描中</string>
     <string name="library_index_notification_message">這可能需要幾分鐘的時間。</string>
