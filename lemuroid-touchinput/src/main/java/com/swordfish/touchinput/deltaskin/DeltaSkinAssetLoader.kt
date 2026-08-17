@@ -11,6 +11,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.nio.ByteBuffer
 
 /**
  * Loads and rasterises Delta skin background assets (PDF or PNG) into bitmaps.
@@ -35,7 +36,7 @@ class DeltaSkinAssetLoader(
     ): Bitmap? {
         if (targetWidthPx <= 0 || targetHeightPx <= 0) return null
 
-        val key = "${skinDir.name}/$assetName@${targetWidthPx}x$targetHeightPx"
+        val key = "${skinDir.name}/$assetName@${targetWidthPx}x${targetHeightPx}v$CACHE_FORMAT_VERSION"
         memoryCache.get(key)?.let { return it }
 
         return withContext(Dispatchers.IO) {
@@ -113,14 +114,59 @@ class DeltaSkinAssetLoader(
                             Bitmap.createBitmap(targetWidthPx, targetHeightPx, Bitmap.Config.ARGB_8888)
                         // transform == null scales the page to fill the destination bitmap.
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        premultiplyInPlace(bitmap)
                         bitmap
                     }
                 }
             }
         }
 
+    /**
+     * Converts a freshly rendered page to premultiplied alpha, in place.
+     *
+     * [PdfRenderer] hands the page straight to PDFium, which writes *straight* (non premultiplied)
+     * alpha into a bitmap that Android has already flagged as premultiplied. Nothing notices while
+     * the colour hiding under a transparent pixel is black, which is the common case.
+     *
+     * Delta artwork is exported from Photoshop against a white matte (`/Matte [1 1 1]` on the soft
+     * mask), so its transparent pixels carry white instead. Read as premultiplied, source over
+     * becomes `white + dst * (1 - 0)`, which saturates: the transparent part of the skin paints
+     * itself opaque white over whatever is behind it.
+     */
+    private fun premultiplyInPlace(bitmap: Bitmap) {
+        val buffer = ByteBuffer.allocate(bitmap.byteCount)
+        bitmap.copyPixelsToBuffer(buffer)
+        val pixels = buffer.array()
+
+        var index = 0
+        while (index < pixels.size) {
+            // ARGB_8888 is laid out R, G, B, A in memory.
+            val alpha = pixels[index + 3].toInt() and 0xFF
+            if (alpha != OPAQUE) {
+                pixels[index] = scaleByAlpha(pixels[index], alpha)
+                pixels[index + 1] = scaleByAlpha(pixels[index + 1], alpha)
+                pixels[index + 2] = scaleByAlpha(pixels[index + 2], alpha)
+            }
+            index += BYTES_PER_PIXEL
+        }
+
+        buffer.rewind()
+        bitmap.copyPixelsFromBuffer(buffer)
+    }
+
+    private fun scaleByAlpha(
+        channel: Byte,
+        alpha: Int,
+    ): Byte = (((channel.toInt() and 0xFF) * alpha) / OPAQUE).toByte()
+
     companion object {
         private const val DISK_CACHE_SUBFOLDER = "skin-cache"
+        private const val BYTES_PER_PIXEL = 4
+        private const val OPAQUE = 255
+
+        // Part of every cache key, so that entries rasterised by an older build are ignored rather
+        // than served. Bump it whenever a change alters the pixels a given asset and size produce.
+        private const val CACHE_FORMAT_VERSION = 2
 
         private val pdfMutex = Mutex()
 
