@@ -5,9 +5,12 @@ import android.content.Context
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.os.Build
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.size.Scale
 import com.swordfish.lemuroid.app.shared.covers.CoverUtils
 import com.swordfish.lemuroid.app.shared.deeplink.DeepLink
 import com.swordfish.lemuroid.common.bitmap.cropToSquare
@@ -16,19 +19,10 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.http.GET
-import retrofit2.http.Streaming
-import retrofit2.http.Url
-import java.io.InputStream
 
 class ShortcutsGenerator(
     private val appContext: Context,
-    retrofit: Retrofit,
 ) {
-    private val thumbnailsApi = retrofit.create(ThumbnailsApi::class.java)
-
     suspend fun pinShortcutForGame(game: Game) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return
@@ -49,15 +43,38 @@ class ShortcutsGenerator(
         shortcutManager.requestPinShortcut(shortcutInfo, null)
     }
 
+    /**
+     * Covers are loaded through Coil rather than fetched directly, so artwork the user picked
+     * themselves (stored locally and pointed at with a file uri) works just as well as a remote
+     * libretro cover.
+     */
     private suspend fun retrieveBitmap(game: Game): Bitmap =
         withContext(Dispatchers.IO) {
-            val result =
-                runCatching {
-                    val response = thumbnailsApi.downloadThumbnail(game.coverFrontUrl!!)
-                    BitmapFactory.decodeStream(response.body()).cropToSquare()
-                }
-            result.getOrElse { retrieveFallbackBitmap(game) }
+            val result = runCatching { loadCoverBitmap(game) }
+            result.getOrNull() ?: retrieveFallbackBitmap(game)
         }
+
+    private suspend fun loadCoverBitmap(game: Game): Bitmap? {
+        val coverUrl = game.coverFrontUrl ?: return null
+        val desiredIconSize = getDesiredIconSize()
+
+        val request =
+            ImageRequest
+                .Builder(appContext)
+                .data(coverUrl)
+                .size(desiredIconSize)
+                .scale(Scale.FILL)
+                // Hardware bitmaps cannot be read back, which Icon.createWithBitmap needs to do.
+                .allowHardware(false)
+                .build()
+
+        val drawable = appContext.imageLoader.execute(request).drawable ?: return null
+
+        return (drawable as? BitmapDrawable)
+            ?.bitmap
+            ?.cropToSquare()
+            ?: drawable.toBitmap(desiredIconSize, desiredIconSize)
+    }
 
     private fun retrieveFallbackBitmap(game: Game): Bitmap {
         val desiredIconSize = getDesiredIconSize()
@@ -76,13 +93,5 @@ class ShortcutsGenerator(
 
         val shortcutManager = appContext.getSystemService(ShortcutManager::class.java)!!
         return shortcutManager.isRequestPinShortcutSupported
-    }
-
-    interface ThumbnailsApi {
-        @GET
-        @Streaming
-        suspend fun downloadThumbnail(
-            @Url url: String,
-        ): Response<InputStream>
     }
 }

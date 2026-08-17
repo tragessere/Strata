@@ -376,10 +376,7 @@ abstract class LemuroidApplicationModule {
 
         @Provides
         @PerApp
-        fun shortcutsGenerator(
-            context: Context,
-            retrofit: Retrofit,
-        ) = ShortcutsGenerator(context, retrofit)
+        fun shortcutsGenerator(context: Context) = ShortcutsGenerator(context)
 
         @Provides
         @PerApp
