@@ -90,6 +90,14 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     private val startGameTime = System.currentTimeMillis()
     private var finishTriggered = false
 
+    /**
+     * True from the moment a game menu is requested until the one that was started hands its result
+     * back. Opening the menu is not instant (the background capture alone can take a few frames),
+     * and every press queues its own request, so without this a quick double tap on the menu button
+     * stacks a second menu on top of the first.
+     */
+    private var gameMenuRequested = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setUpExceptionsHandler()
@@ -177,9 +185,11 @@ abstract class BaseGameActivity : ImmersiveActivity() {
         currentTiltConfiguration: TiltConfiguration,
         tiltConfigurations: List<TiltConfiguration>,
     ) {
-        if (baseGameScreenViewModel.loadingState.value) {
+        if (baseGameScreenViewModel.loadingState.value || gameMenuRequested) {
             return
         }
+
+        gameMenuRequested = true
 
         val coreOptions = getCoreOptions()
 
@@ -389,6 +399,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     ) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == DIALOG_REQUEST) {
+            gameMenuRequested = false
             Timber.i("Game menu dialog response: ${data?.extras.dump()}")
             if (data?.getBooleanExtra(GameMenuContract.RESULT_RESET, false) == true) {
                 GlobalScope.launch {
