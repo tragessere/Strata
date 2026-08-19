@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -98,6 +100,22 @@ import javax.inject.Inject
 
 private const val TABLET_SMALLEST_WIDTH_DP = 600
 private const val NAV_ANIM_DURATION = 350
+
+/**
+ * [TopAppBarDefaults.exitUntilCollapsedScrollBehavior] builds a fresh behaviour, and with it a
+ * fresh [androidx.compose.ui.input.nestedscroll.NestedScrollConnection], on every call. The main
+ * screen recomposes on every UI state emission — an indexing run alone flips it repeatedly — which
+ * would hand `Modifier.nestedScroll` a different connection in the middle of a scroll. Keeping the
+ * first one is enough to stop that; the collapse state itself already lives in the remembered
+ * [androidx.compose.material3.TopAppBarState].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun rememberExitUntilCollapsedScrollBehavior(): TopAppBarScrollBehavior {
+    val topBarState = rememberTopAppBarState()
+    val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topBarState)
+    return remember(topBarState) { behavior }
+}
 
 @OptIn(DelicateCoroutinesApi::class)
 class MainActivity :
@@ -305,16 +323,12 @@ class MainActivity :
                 }
             }
 
-            val onGameFavoriteToggle = { game: Game, isFavorite: Boolean ->
-                gameInteractor.onFavoriteToggle(game, isFavorite)
-            }
-
             val mainUIState =
                 mainViewModel.state
                     .collectAsState(MainViewModel.UiState())
                     .value
 
-            val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+            val scrollBehavior = rememberExitUntilCollapsedScrollBehavior()
 
             Scaffold(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -367,7 +381,7 @@ class MainActivity :
                 ) {
                     composable(MainRoute.HOME) {
                         HomeScreen(
-                            modifier = Modifier.padding(padding),
+                            contentPadding = padding,
                             viewModel =
                                 viewModel(
                                     factory =
@@ -601,10 +615,13 @@ class MainActivity :
                 gameLaunchConflictViewModel.consumeNotice()
                 displayToast(
                     when (syncNotice) {
-                        GameLaunchConflictViewModel.Notice.RESOLVED ->
+                        GameLaunchConflictViewModel.Notice.RESOLVED -> {
                             R.string.game_launch_conflict_toast_resolved
-                        GameLaunchConflictViewModel.Notice.UNRESOLVED ->
+                        }
+
+                        GameLaunchConflictViewModel.Notice.UNRESOLVED -> {
                             R.string.game_launch_conflict_toast_unresolved
+                        }
                     },
                 )
             }

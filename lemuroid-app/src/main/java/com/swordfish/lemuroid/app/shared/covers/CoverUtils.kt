@@ -15,6 +15,8 @@ import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 
+private val PARENTHESISED_SUFFIX = Regex("\\(.*\\)")
+
 object CoverUtils {
     fun loadCover(
         game: Game,
@@ -70,7 +72,7 @@ object CoverUtils {
 
         val sanitizedName =
             displayTitle
-                .replace(Regex("\\(.*\\)"), "")
+                .replace(PARENTHESISED_SUFFIX, "")
 
         return sanitizedName
             .asSequence()

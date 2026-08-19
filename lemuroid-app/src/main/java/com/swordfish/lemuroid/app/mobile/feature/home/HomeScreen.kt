@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,6 +67,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
     viewModel: HomeViewModel,
     searchQuery: String,
     onGameClick: (Game) -> Unit,
@@ -99,6 +103,7 @@ fun HomeScreen(
     val state = viewModel.getViewStates().collectAsState(HomeViewModel.UIState())
     HomeScreen(
         modifier,
+        contentPadding,
         state.value,
         onGameClick,
         onGameLongClick,
@@ -155,6 +160,7 @@ private data class RailSection(
 @Composable
 private fun HomeScreen(
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues,
     state: HomeViewModel.UIState,
     onGameClicked: (Game) -> Unit,
     onGameLongClick: (Game) -> Unit,
@@ -165,7 +171,12 @@ private fun HomeScreen(
     val context = LocalContext.current
 
     val (entries, railSections) =
-        remember(state) {
+        remember(
+            state.sections,
+            state.showNoGamesCard,
+            state.showNoMicrophonePermissionCard,
+            state.showDesmumeDeprecatedCard,
+        ) {
             val entries = mutableListOf<GridEntry>()
 
             if (state.showNoGamesCard) {
@@ -212,7 +223,7 @@ private fun HomeScreen(
         // Stay blank until the first state has been built, so the empty message isn't shown
         // for the brief moment before the library has been read.
         if (!state.isLoading) {
-            LemuroidEmptyView(modifier = modifier)
+            LemuroidEmptyView(modifier = modifier.padding(contentPadding))
         }
         return
     }
@@ -220,6 +231,20 @@ private fun HomeScreen(
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
     var activeRailIndex by remember { mutableStateOf<Int?>(null) }
+
+    // The scaffold insets are folded into the grid's content padding rather than applied as a
+    // Modifier.padding around it. The large top bar changes height on every frame while it
+    // collapses, and as a modifier that would resize the grid's viewport each frame — remeasuring
+    // the whole grid on top of the scroll it is already doing. As content padding the viewport
+    // stays put and the items simply scroll under the (opaque) bar.
+    val layoutDirection = LocalLayoutDirection.current
+    val gridContentPadding =
+        PaddingValues(
+            start = contentPadding.calculateStartPadding(layoutDirection) + 16.dp,
+            top = contentPadding.calculateTopPadding() + 16.dp,
+            end = contentPadding.calculateEndPadding(layoutDirection) + 40.dp,
+            bottom = contentPadding.calculateBottomPadding() + 16.dp,
+        )
 
     Box(
         modifier =
@@ -231,7 +256,7 @@ private fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             state = gridState,
             columns = GridCells.Adaptive(96.dp),
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 40.dp, bottom = 16.dp),
+            contentPadding = gridContentPadding,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -272,27 +297,36 @@ private fun HomeScreen(
             }
         }
 
-        if (railSections.isNotEmpty()) {
-            SystemScrollRail(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                railSections = railSections,
-                activeIndex = activeRailIndex,
-                onSelect = { index ->
-                    activeRailIndex = index
-                    coroutineScope.launch {
-                        gridState.scrollToItem(railSections[index].itemIndex)
-                    }
-                },
-                onRelease = { activeRailIndex = null },
-            )
-        }
+        // The rail and its bubble are the one part that must stay clear of the bars rather than
+        // scroll under them, so they keep the insets as real padding.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding),
+        ) {
+            if (railSections.isNotEmpty()) {
+                SystemScrollRail(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    railSections = railSections,
+                    activeIndex = activeRailIndex,
+                    onSelect = { index ->
+                        activeRailIndex = index
+                        coroutineScope.launch {
+                            gridState.scrollToItem(railSections[index].itemIndex)
+                        }
+                    },
+                    onRelease = { activeRailIndex = null },
+                )
+            }
 
-        val active = activeRailIndex
-        if (active != null) {
-            RailSelectionBubble(
-                modifier = Modifier.align(Alignment.Center),
-                railSection = railSections[active],
-            )
+            val active = activeRailIndex
+            if (active != null) {
+                RailSelectionBubble(
+                    modifier = Modifier.align(Alignment.Center),
+                    railSection = railSections[active],
+                )
+            }
         }
     }
 }
