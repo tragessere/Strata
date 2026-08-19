@@ -2,12 +2,14 @@ package com.swordfish.lemuroid.app.mobile.feature.gamemenu
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -27,6 +29,17 @@ internal const val BACKGROUND_CAPTURE_TIMEOUT_MS = 300L
 
 /** Softens the edges the capture is stretched into, so it reads as a blur and not as low res. */
 private val BLUR_RADIUS = 16.dp
+
+/**
+ * How far the blurred copy is scaled out past each edge of the screen.
+ *
+ * A blur reads pixels from around every one it produces, and at the edges of the layer it draws
+ * into there are none to read, so the result fades out towards them whichever edge treatment is
+ * asked for. The fade reaches further in than the nominal radius, so the margin is twice that to
+ * clear it. What it costs is a slightly tighter crop of a background that is only ever a blur, and
+ * the eye has nothing to measure that against.
+ */
+private val BLUR_OVERSCAN = BLUR_RADIUS * 2
 
 /**
  * The frame captured from the game, handed from the game activity to the menu activity.
@@ -79,14 +92,23 @@ internal fun BackgroundBlur(
     image: ImageBitmap,
     alpha: () -> Float,
 ) {
-    Image(
-        bitmap = image,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer { this.alpha = alpha() }
-                .blur(BLUR_RADIUS, BlurredEdgeTreatment.Rectangle),
-    )
+    Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+        Image(
+            bitmap = image,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        this.alpha = alpha()
+                        // Scaling the blurred result up carries its faded edges off the screen,
+                        // where the box above clips them away. The shorter side decides the scale,
+                        // since it is the one the margin is the larger fraction of.
+                        val scale = 1f + 2f * BLUR_OVERSCAN.toPx() / minOf(size.width, size.height)
+                        scaleX = scale
+                        scaleY = scale
+                    }.blur(BLUR_RADIUS, BlurredEdgeTreatment.Rectangle),
+        )
+    }
 }
