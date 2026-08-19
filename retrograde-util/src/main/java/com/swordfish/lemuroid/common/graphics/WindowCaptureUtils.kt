@@ -1,3 +1,5 @@
+@file:RequiresApi(Build.VERSION_CODES.O)
+
 package com.swordfish.lemuroid.common.graphics
 
 import android.graphics.Bitmap
@@ -11,6 +13,7 @@ import android.view.PixelCopy
 import android.view.SurfaceView
 import android.view.Window
 import androidx.annotation.RequiresApi
+import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -38,18 +41,16 @@ import kotlin.math.roundToInt
 suspend fun Window.captureFrame(
     maxDimension: Int,
     surfaceView: SurfaceView?,
-): Bitmap? {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
-
-    return withContext(Dispatchers.Main) {
+): Bitmap? =
+    withContext(Dispatchers.Main) {
         val decorView = peekDecorView() ?: return@withContext null
         if (decorView.width <= 0 || decorView.height <= 0) return@withContext null
 
         val scale = maxDimension / maxOf(decorView.width, decorView.height).toFloat()
         val frame =
-            Bitmap.createBitmap(
-                scaled(decorView.width, scale),
-                scaled(decorView.height, scale),
+            createBitmap(
+                scaledSize(decorView.width, scale),
+                scaledSize(decorView.height, scale),
                 Bitmap.Config.ARGB_8888,
             )
         val canvas = Canvas(frame)
@@ -59,10 +60,9 @@ suspend fun Window.captureFrame(
 
         frame.takeIf { surfaceCopied || windowCopied }
     }
-}
 
 /** Copies the surface view and draws it where it sits within the window. */
-private suspend fun Window.drawSurfaceView(
+private suspend fun drawSurfaceView(
     canvas: Canvas,
     surfaceView: SurfaceView,
     scale: Float,
@@ -70,9 +70,9 @@ private suspend fun Window.drawSurfaceView(
     if (surfaceView.width <= 0 || surfaceView.height <= 0) return false
 
     val destination =
-        Bitmap.createBitmap(
-            scaled(surfaceView.width, scale),
-            scaled(surfaceView.height, scale),
+        createBitmap(
+            scaledSize(surfaceView.width, scale),
+            scaledSize(surfaceView.height, scale),
             Bitmap.Config.ARGB_8888,
         )
 
@@ -88,10 +88,10 @@ private suspend fun Window.drawSurfaceView(
         copy,
         null,
         Rect(
-            scaled(location[0], scale),
-            scaled(location[1], scale),
-            scaled(location[0] + surfaceView.width, scale),
-            scaled(location[1] + surfaceView.height, scale),
+            scaledOffset(location[0], scale),
+            scaledOffset(location[1], scale),
+            scaledOffset(location[0] + surfaceView.width, scale),
+            scaledOffset(location[1] + surfaceView.height, scale),
         ),
         Paint(Paint.FILTER_BITMAP_FLAG),
     )
@@ -103,13 +103,11 @@ private suspend fun Window.drawWindow(
     canvas: Canvas,
     scale: Float,
 ): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
-
     val decorView = peekDecorView() ?: return false
     val destination =
-        Bitmap.createBitmap(
-            scaled(decorView.width, scale),
-            scaled(decorView.height, scale),
+        createBitmap(
+            scaledSize(decorView.width, scale),
+            scaledSize(decorView.height, scale),
             Bitmap.Config.ARGB_8888,
         )
 
@@ -122,7 +120,6 @@ private suspend fun Window.drawWindow(
     return true
 }
 
-@RequiresApi(Build.VERSION_CODES.N)
 private suspend fun awaitPixelCopy(
     destination: Bitmap,
     request: (Bitmap, PixelCopy.OnPixelCopyFinishedListener, Handler) -> Unit,
@@ -141,7 +138,14 @@ private suspend fun awaitPixelCopy(
         }
     }
 
-private fun scaled(
+/** Scales a size, holding it to the one pixel a bitmap has to have at the least. */
+private fun scaledSize(
     value: Int,
     scale: Float,
 ): Int = (value * scale).roundToInt().coerceAtLeast(1)
+
+/** Scales a coordinate, which unlike a size is free to land on zero. */
+private fun scaledOffset(
+    value: Int,
+    scale: Float,
+): Int = (value * scale).roundToInt()
