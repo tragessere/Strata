@@ -10,9 +10,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavController
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.main.navigateToSystemSkin
+import com.swordfish.lemuroid.app.utils.android.ComposableLifecycle
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidCardSettingsGroup
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsMenuLink
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsPage
@@ -26,6 +28,11 @@ fun ControllerSkinsScreen(
 ) {
     val state = viewModel.uiState.collectAsState(ControllerSkinsViewModel.State()).value
     val context = LocalContext.current
+
+    // Refresh when returning from the per-system screen
+    ComposableLifecycle { _, event ->
+        if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.importErrorEvents.collect {
