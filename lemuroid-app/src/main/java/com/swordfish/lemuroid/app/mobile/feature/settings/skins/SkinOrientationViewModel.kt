@@ -10,10 +10,9 @@ import com.swordfish.lemuroid.lib.library.skin.DeltaSkinSystemMapping
 import com.swordfish.touchinput.deltaskin.DeltaSkinInfo
 import com.swordfish.touchinput.deltaskin.DeltaSkinRepresentation
 import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager.Orientation
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
 
@@ -27,7 +26,6 @@ data class SkinPreview(
  * Backs the per-orientation skin picker (the second settings layer): it lists every skin compatible
  * with the system, each with a preview for the selected [orientation], and tracks which one is active.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class SkinOrientationViewModel(
     private val deltaSkinManager: DeltaSkinManager,
     private val controllerSkinPreferences: ControllerSkinPreferences,
@@ -65,39 +63,37 @@ class SkinOrientationViewModel(
         val selectedId: String? = null,
     )
 
-    private val refreshTrigger = MutableStateFlow(0)
-
+    // The option list is loaded once; the selection is observed separately so tapping a skin only moves
+    // the check mark instead of reloading (and re-rendering) every preview.
     val uiState =
-        refreshTrigger
-            .mapLatest { load() }
-            .stateIn(viewModelScope, SharingStarted.Lazily, State())
+        if (systemID == null) {
+            flow { emit(State()) }
+        } else {
+            combine(
+                flow { emit(loadOptions(systemID)) },
+                controllerSkinPreferences.observeSelectedSkinId(systemID, orientation),
+            ) { options, selectedId -> State(options, selectedId) }
+        }.stateIn(viewModelScope, SharingStarted.Lazily, State())
 
-    private suspend fun load(): State {
-        val system = systemID ?: return State()
+    private suspend fun loadOptions(system: SystemID): List<SkinOption> {
         val orientationName = orientationName()
-        val options =
-            deltaSkinManager
-                .listSkins()
-                .filter { DeltaSkinSystemMapping.isCompatible(it.info.gameTypeIdentifier, system) }
-                .map { handle ->
-                    val representation =
-                        deltaSkinManager.resolveRepresentation(handle.info, isTablet, orientationName)
-                    SkinOption(
-                        id = handle.id,
-                        name = handle.info.name,
-                        preview = representation?.let { SkinPreview(handle.directory, it) },
-                    )
-                }
-        return State(
-            options = options,
-            selectedId = controllerSkinPreferences.getSelectedSkinId(system, orientation),
-        )
+        return deltaSkinManager
+            .listSkins()
+            .filter { DeltaSkinSystemMapping.isCompatible(it.info.gameTypeIdentifier, system) }
+            .map { handle ->
+                val representation =
+                    deltaSkinManager.resolveRepresentation(handle.info, isTablet, orientationName)
+                SkinOption(
+                    id = handle.id,
+                    name = handle.info.name,
+                    preview = representation?.let { SkinPreview(handle.directory, it) },
+                )
+            }
     }
 
     fun setSelection(skinId: String?) {
         val system = systemID ?: return
         controllerSkinPreferences.setSelectedSkinId(system, orientation, skinId)
-        refresh()
     }
 
     private fun orientationName(): String =
@@ -105,8 +101,4 @@ class SkinOrientationViewModel(
             Orientation.LANDSCAPE -> DeltaSkinInfo.ORIENTATION_LANDSCAPE
             Orientation.PORTRAIT -> DeltaSkinInfo.ORIENTATION_PORTRAIT
         }
-
-    private fun refresh() {
-        refreshTrigger.value += 1
-    }
 }

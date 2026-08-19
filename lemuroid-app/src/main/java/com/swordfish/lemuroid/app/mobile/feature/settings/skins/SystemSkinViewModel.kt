@@ -15,7 +15,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -68,9 +70,13 @@ class SystemSkinViewModel(
     private val importErrors = Channel<Unit>(Channel.BUFFERED)
     val importErrorEvents = importErrors.receiveAsFlow()
 
+    // Reloads on selection changes too, so the previews are already up to date while the per-orientation
+    // picker is in front of this screen rather than reloading on the way back.
     val uiState =
-        refreshTrigger
-            .mapLatest { load() }
+        merge(
+            refreshTrigger.map { },
+            controllerSkinPreferences.observeSelectionChanges(),
+        ).mapLatest { load() }
             .stateIn(viewModelScope, SharingStarted.Lazily, State())
 
     private suspend fun load(): State {
@@ -141,7 +147,7 @@ class SystemSkinViewModel(
             Orientation.PORTRAIT -> DeltaSkinInfo.ORIENTATION_PORTRAIT
         }
 
-    fun refresh() {
+    private fun refresh() {
         refreshTrigger.value += 1
     }
 }
