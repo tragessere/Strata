@@ -120,10 +120,14 @@ class GameViewModelSaves(
 
     private suspend fun isAutoSaveEnabled(): Boolean = systemCoreConfig.statesSupported && settingsManager.autoSave()
 
+    /**
+     * Save a screenshot of the game's viewport for use in a save-state preview
+     */
     private suspend fun takeScreenshotPreview(index: Int) {
+        val gameView = retroGameView.retroGameView ?: return
         val sizeInDp = StatesPreviewManager.PREVIEW_SIZE_DP
         val previewSize = GraphicsUtils.convertDpToPixel(sizeInDp, appContext).roundToInt()
-        val preview = retroGameView.retroGameView?.takeScreenshot(previewSize, 3)
+        val preview = gameView.takeScreenshot(previewSize, gameView.viewport, 3)
         if (preview != null) {
             statesPreviewManager.setPreviewForSlot(game, preview, systemCoreConfig.coreID, index)
         }
