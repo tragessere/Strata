@@ -170,6 +170,18 @@ class GameViewModelTouchControls(
 
     fun getSkinState(): StateFlow<SkinUiState> = skinState
 
+    /**
+     * Opacity of the skin artwork in 0..1, shared by every system. Kept as its own flow so dragging the
+     * slider in settings is reflected without reloading the skin.
+     */
+    private val skinOpacity: StateFlow<Float> =
+        controllerSkinPreferences
+            .observeOpacity()
+            .map { it / 100f }
+            .stateIn(scope, SharingStarted.Eagerly, controllerSkinPreferences.getOpacity() / 100f)
+
+    fun getSkinOpacity(): StateFlow<Float> = skinOpacity
+
     /** True when a controller skin is selected (loading or active), replacing the default touch controls. */
     fun isSkinActive(): Boolean = skinState.value !is SkinUiState.None
 

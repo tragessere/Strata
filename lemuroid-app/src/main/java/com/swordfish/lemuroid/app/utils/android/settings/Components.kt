@@ -4,25 +4,31 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.alorma.compose.settings.storage.base.SettingValueState
 import com.alorma.compose.settings.ui.SettingsMenuLink
@@ -162,6 +168,52 @@ fun LemuroidSettingsSlider(
         subtitle = subtitle,
         enabled = enabled,
         colors = if (enabled) defaultColors else disabledColors,
+    )
+}
+
+/**
+ * A slider that reads its current value beside the bar instead of in the subtitle above it, which is
+ * where [LemuroidSettingsSlider] (and the library tile it wraps) would put it.
+ */
+@Composable
+fun LemuroidSettingsSliderWithValue(
+    modifier: Modifier = Modifier,
+    state: SettingValueState<Int>,
+    steps: Int,
+    enabled: Boolean = true,
+    valueRange: ClosedFloatingPointRange<Float>,
+    title: @Composable () -> Unit,
+    subtitle: (@Composable () -> Unit)? = null,
+    valueLabel: (Int) -> String,
+) {
+    ListItem(
+        modifier = modifier.fillMaxWidth(),
+        colors = lemuroidSettingsColor(enabled),
+        headlineContent = title,
+        supportingContent = {
+            Column {
+                subtitle?.invoke()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Slider(
+                        modifier = Modifier.weight(1f),
+                        value = state.value.toFloat(),
+                        onValueChange = { state.value = it.roundToInt() },
+                        valueRange = valueRange,
+                        steps = steps,
+                        enabled = enabled,
+                    )
+                    // Reserved width, so the bar doesn't shift as the label grows and shrinks.
+                    Text(
+                        modifier = Modifier.widthIn(min = 40.dp),
+                        text = valueLabel(state.value),
+                        textAlign = TextAlign.End,
+                    )
+                }
+            }
+        },
     )
 }
 

@@ -16,7 +16,10 @@ import com.swordfish.lemuroid.app.mobile.feature.main.navigateToSystemSkin
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidCardSettingsGroup
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsMenuLink
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsPage
+import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsSliderWithValue
+import com.swordfish.lemuroid.app.utils.android.settings.intPreferenceState
 import com.swordfish.lemuroid.lib.library.GameSystem
+import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 
 @Composable
 fun ControllerSkinsScreen(
@@ -74,5 +77,30 @@ fun ControllerSkinsScreen(
                 )
             }
         }
+
+        // A single opacity for every system: skins that declare themselves translucent are drawn faded so
+        // the game shows through them.
+        LemuroidCardSettingsGroup(
+            title = { Text(text = stringResource(R.string.controller_skins_appearance)) },
+        ) {
+            val opacity =
+                intPreferenceState(
+                    key = ControllerSkinPreferences.KEY_OPACITY,
+                    default = ControllerSkinPreferences.DEFAULT_OPACITY,
+                )
+            val opacityFormat = stringResource(R.string.controller_skins_opacity_value)
+            LemuroidSettingsSliderWithValue(
+                state = opacity,
+                // 0% to 100% in 5% increments.
+                steps = 19,
+                valueRange = MIN_SKIN_OPACITY..MAX_SKIN_OPACITY,
+                title = { Text(text = stringResource(R.string.controller_skins_opacity)) },
+                subtitle = { Text(text = stringResource(R.string.controller_skins_opacity_description)) },
+                valueLabel = { value -> opacityFormat.format(value) },
+            )
+        }
     }
 }
+
+private const val MIN_SKIN_OPACITY = 0f
+private const val MAX_SKIN_OPACITY = 100f

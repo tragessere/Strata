@@ -33,6 +33,10 @@ import kotlin.math.roundToInt
  * single overlay-wide multitouch handler, and reports the rectangle where the emulator video should
  * be shown.
  *
+ * [artworkOpacity] fades the artwork so more of the video behind it shows through. It only applies to
+ * representations that declare themselves `translucent`: opaque artwork is drawn over the whole screen
+ * (or over black in portrait), so fading it would just reveal what the skin means to hide.
+ *
  * Coordinate semantics (matching Delta):
  * - When the skin defines `screens`, `mappingSize` is the full canvas: it is letterboxed to fit the
  *   screen and the emulator video is placed at the screen's `outputFrame`.
@@ -52,6 +56,7 @@ fun DeltaSkinOverlay(
     onMotion: (source: Int, x: Float, y: Float) -> Unit,
     modifier: Modifier = Modifier,
     hapticFeedbackType: HapticFeedbackType = HapticFeedbackType.NONE,
+    artworkOpacity: Float = 1f,
 ) {
     val density = LocalDensity.current
     val haptics = rememberSkinHapticFeedback()
@@ -96,6 +101,12 @@ fun DeltaSkinOverlay(
                         bitmap = image,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
+                        alpha =
+                            if (representation.translucent) {
+                                artworkOpacity.coerceIn(0f, 1f)
+                            } else {
+                                1f
+                            },
                     )
                 }
             }

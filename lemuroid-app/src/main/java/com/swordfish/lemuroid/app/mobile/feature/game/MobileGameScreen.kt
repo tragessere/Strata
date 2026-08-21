@@ -105,6 +105,8 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                 .getSkinState()
                 .collectAsState(GameViewModelTouchControls.SkinUiState.None)
 
+        val skinOpacity = viewModel.getSkinOpacity().collectAsState(1f)
+
         val tiltConfiguration = viewModel.getTiltConfiguration().collectAsState(TiltConfiguration.Disabled)
         val tiltSimulatedStates = viewModel.getSimulatedTiltEvents().collectAsState(InputState())
         val tiltSimulatedControls = remember { derivedStateOf { tiltConfiguration.value.controlIds() } }
@@ -181,6 +183,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         onMenu = { pressed -> viewModel.sendSkinMenu(pressed) },
                         onMotion = { source, x, y -> viewModel.sendSkinMotion(source, x, y) },
                         hapticFeedbackType = padHapticFeedback,
+                        artworkOpacity = skinOpacity.value,
                     )
 
                     val hasMenuItem =

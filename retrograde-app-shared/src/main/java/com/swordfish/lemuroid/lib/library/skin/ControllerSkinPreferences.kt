@@ -17,8 +17,15 @@ import kotlinx.coroutines.flow.conflate
 class ControllerSkinPreferences(
     private val sharedPreferences: SharedPreferences,
 ) {
-    private companion object {
-        const val KEY_PREFIX = "controller_skin_"
+    companion object {
+        /**
+         * Opacity (as a percentage) of the artwork of skins that declare themselves translucent. Shared
+         * with the settings slider, which writes it through the same preferences.
+         */
+        const val KEY_OPACITY = "controller_skin_opacity"
+        const val DEFAULT_OPACITY = 100
+
+        private const val KEY_PREFIX = "controller_skin_"
     }
 
     fun getSelectedSkinId(
@@ -39,6 +46,22 @@ class ControllerSkinPreferences(
             }
         }
     }
+
+    /** Artwork opacity of translucent skins, as a percentage. Applies to every system. */
+    fun getOpacity(): Int = sharedPreferences.getInt(KEY_OPACITY, DEFAULT_OPACITY)
+
+    fun observeOpacity(): Flow<Int> =
+        callbackFlow {
+            trySend(getOpacity())
+            val listener =
+                SharedPreferences.OnSharedPreferenceChangeListener { prefs, changedKey ->
+                    if (changedKey == KEY_OPACITY) {
+                        trySend(prefs.getInt(KEY_OPACITY, DEFAULT_OPACITY))
+                    }
+                }
+            sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
+            awaitClose { sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.conflate()
 
     fun observeSelectedSkinId(
         systemID: SystemID,
@@ -66,7 +89,7 @@ class ControllerSkinPreferences(
         callbackFlow {
             val listener =
                 SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
-                    if (changedKey?.startsWith(KEY_PREFIX) == true) {
+                    if (changedKey?.startsWith(KEY_PREFIX) == true && changedKey != KEY_OPACITY) {
                         trySend(Unit)
                     }
                 }

@@ -58,6 +58,10 @@
     <string name="controller_skins_installed">Installed skins</string>
     <string name="controller_skins_none_installed">No skins installed for this system</string>
     <string name="controller_skins_orientations">Orientations: %1$s</string>
+    <string name="controller_skins_appearance">Appearance</string>
+    <string name="controller_skins_opacity">Skin opacity</string>
+    <string name="controller_skins_opacity_description">Only affects skins that support transparency</string>
+    <string name="controller_skins_opacity_value">%1$d%%</string>
     <string name="controller_skins_delete_confirm_message">\"%1$s\" will be removed. Any orientation using it reverts to the default controls.</string>
 
     <string name="settings_retropad_button_name">RetroPad %1$s</string>
