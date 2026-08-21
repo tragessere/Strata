@@ -14,6 +14,7 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.db.entity.displayTitle
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
+import java.util.Locale
 
 private val PARENTHESISED_SUFFIX = Regex("\\(.*\\)")
 
@@ -80,7 +81,7 @@ object CoverUtils {
             .take(3)
             .joinToString("")
             .ifBlank { displayTitle.first().toString() }
-            .capitalize()
+            .replaceFirstChar { it.titlecase(Locale.ROOT) }
     }
 
     private fun computeColor(game: Game): Int = ColorUtils.randomColor(game.displayTitle)

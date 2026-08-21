@@ -89,12 +89,12 @@ class LocalStorageProvider(
     // There is no need to handle anything. Data file have to be in the same directory for detection we expect them
     // to still be there.
     private fun getDataFile(dataFile: DataFile): File {
-        val dataFilePath = Uri.parse(dataFile.fileUri).path
+        val dataFilePath = dataFile.fileUri.toUri().path
         return File(dataFilePath)
     }
 
     private fun getGameRom(game: Game): File {
-        val gamePath = Uri.parse(game.fileUri).path
+        val gamePath = game.fileUri.toUri().path
         val originalFile = File(gamePath)
         if (!originalFile.isZipped() || originalFile.name == game.fileName) {
             return originalFile

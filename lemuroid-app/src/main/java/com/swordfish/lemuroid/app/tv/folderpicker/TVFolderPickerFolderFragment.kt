@@ -3,7 +3,6 @@ package com.swordfish.lemuroid.app.tv.folderpicker
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import androidx.annotation.NonNull
 import androidx.leanback.app.GuidedStepSupportFragment
 import androidx.leanback.widget.GuidanceStylist
 import androidx.leanback.widget.GuidedAction
@@ -23,7 +22,6 @@ class TVFolderPickerFolderFragment : GuidedStepSupportFragment() {
         super.onCreate(savedInstanceState)
     }
 
-    @NonNull
     override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance {
         val title = directory.name
         val description = resources.getString(R.string.tv_folder_picker_title)

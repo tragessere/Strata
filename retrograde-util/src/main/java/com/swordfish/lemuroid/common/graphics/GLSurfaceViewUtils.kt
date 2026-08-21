@@ -3,6 +3,8 @@ package com.swordfish.lemuroid.common.graphics
 import android.graphics.Bitmap
 import android.opengl.GLSurfaceView
 import android.view.PixelCopy
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import com.swordfish.lemuroid.common.kotlin.runCatchingWithRetry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,21 +36,18 @@ private suspend fun GLSurfaceView.takeScreenshot(maxResolution: Int): Bitmap? =
                 val inputScaling = outputScaling * 2
 
                 val inputBitmap =
-                    Bitmap.createBitmap(
+                    createBitmap(
                         (width * inputScaling).roundToInt(),
                         (height * inputScaling).roundToInt(),
-                        Bitmap.Config.ARGB_8888,
                     )
 
                 val onCompleted = { result: Int ->
                     if (result == PixelCopy.SUCCESS) {
                         // This rescaling limits the artifacts introduced by shaders.
                         val outputBitmap =
-                            Bitmap.createScaledBitmap(
-                                inputBitmap,
+                            inputBitmap.scale(
                                 (width * outputScaling).roundToInt(),
                                 (height * outputScaling).roundToInt(),
-                                true,
                             )
 
                         cont.resume(outputBitmap)

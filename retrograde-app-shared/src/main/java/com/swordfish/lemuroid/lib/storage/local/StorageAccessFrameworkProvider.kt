@@ -3,6 +3,7 @@ package com.swordfish.lemuroid.lib.storage.local
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.leanback.preference.LeanbackPreferenceFragment
 import com.swordfish.lemuroid.common.kotlin.extractEntryToFile
@@ -39,7 +40,7 @@ class StorageAccessFrameworkProvider(
 
     override fun listBaseStorageFiles(): Flow<List<BaseStorageFile>> =
         getExternalFolder()?.let { folder ->
-            traverseDirectoryEntries(Uri.parse(folder))
+            traverseDirectoryEntries(folder.toUri())
         } ?: emptyFlow()
 
     override fun getStorageFile(baseStorageFile: BaseStorageFile): StorageFile? =
@@ -130,7 +131,7 @@ class StorageAccessFrameworkProvider(
         dataFiles: List<DataFile>,
         allowVirtualFiles: Boolean,
     ): RomFiles {
-        val originalDocumentUri = Uri.parse(game.fileUri)
+        val originalDocumentUri = game.fileUri.toUri()
         val originalDocument = DocumentFile.fromSingleUri(context, originalDocumentUri)!!
 
         val isZipped = originalDocument.isZipped() && originalDocument.name != game.fileName
@@ -181,7 +182,7 @@ class StorageAccessFrameworkProvider(
     private fun getDataFileVirtual(dataFile: DataFile): RomFiles.Virtual.Entry =
         RomFiles.Virtual.Entry(
             "$VIRTUAL_FILE_PATH/${dataFile.fileName}",
-            context.contentResolver.openFileDescriptor(Uri.parse(dataFile.fileUri), "r")!!,
+            context.contentResolver.openFileDescriptor(dataFile.fileUri.toUri(), "r")!!,
         )
 
     private fun getDataFileStandard(
@@ -200,7 +201,7 @@ class StorageAccessFrameworkProvider(
             return cacheFile
         }
 
-        val stream = context.contentResolver.openInputStream(Uri.parse(dataFile.fileUri))!!
+        val stream = context.contentResolver.openInputStream(dataFile.fileUri.toUri())!!
         stream.writeToFile(cacheFile)
         return cacheFile
     }
@@ -208,7 +209,7 @@ class StorageAccessFrameworkProvider(
     private fun getGameRomVirtual(game: Game): RomFiles.Virtual.Entry =
         RomFiles.Virtual.Entry(
             "$VIRTUAL_FILE_PATH/${game.fileName}",
-            context.contentResolver.openFileDescriptor(Uri.parse(game.fileUri), "r")!!,
+            context.contentResolver.openFileDescriptor(game.fileUri.toUri(), "r")!!,
         )
 
     private fun getGameRomStandard(

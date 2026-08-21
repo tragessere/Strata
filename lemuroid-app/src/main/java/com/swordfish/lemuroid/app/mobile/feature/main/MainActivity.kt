@@ -680,7 +680,6 @@ class MainActivity :
         companion object {
             @Provides
             @PerActivity
-            @JvmStatic
             fun settingsInteractor(
                 activity: MainActivity,
                 directoriesManager: DirectoriesManager,
@@ -688,7 +687,6 @@ class MainActivity :
 
             @Provides
             @PerActivity
-            @JvmStatic
             fun gameInteractor(
                 activity: MainActivity,
                 retrogradeDb: RetrogradeDatabase,

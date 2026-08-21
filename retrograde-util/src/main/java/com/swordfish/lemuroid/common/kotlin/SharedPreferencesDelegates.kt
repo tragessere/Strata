@@ -1,6 +1,7 @@
 package com.swordfish.lemuroid.common.kotlin
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import kotlin.math.roundToInt
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -21,7 +22,7 @@ class SharedPreferencesDelegates {
             property: KProperty<*>,
             value: Boolean,
         ) {
-            sharedPreferences.edit().putBoolean(key, value).apply()
+            sharedPreferences.edit { putBoolean(key, value) }
         }
     }
 
@@ -41,7 +42,7 @@ class SharedPreferencesDelegates {
             property: KProperty<*>,
             value: Float,
         ) {
-            sharedPreferences.edit().putInt(key, percentageToIndex(value)).apply()
+            sharedPreferences.edit { putInt(key, percentageToIndex(value)) }
         }
 
         private fun indexToPercentage(index: Int) = (index.toFloat() / (max))
@@ -64,7 +65,7 @@ class SharedPreferencesDelegates {
             property: KProperty<*>,
             value: String,
         ) {
-            sharedPreferences.edit().putString(key, value).apply()
+            sharedPreferences.edit { putString(key, value) }
         }
     }
 
@@ -83,7 +84,7 @@ class SharedPreferencesDelegates {
             property: KProperty<*>,
             value: Long,
         ) {
-            sharedPreferences.edit().putLong(key, value).apply()
+            sharedPreferences.edit { putLong(key, value) }
         }
     }
 
@@ -102,7 +103,7 @@ class SharedPreferencesDelegates {
             property: KProperty<*>,
             value: Set<String>,
         ) {
-            sharedPreferences.edit().putStringSet(key, value).apply()
+            sharedPreferences.edit { putStringSet(key, value) }
         }
     }
 }

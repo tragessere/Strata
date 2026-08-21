@@ -5,6 +5,8 @@ import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.util.LruCache
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -96,7 +98,7 @@ class DeltaSkinAssetLoader(
     ): Bitmap? {
         val decoded = BitmapFactory.decodeFile(file.absolutePath) ?: return null
         if (decoded.width == targetWidthPx && decoded.height == targetHeightPx) return decoded
-        return Bitmap.createScaledBitmap(decoded, targetWidthPx, targetHeightPx, true).also {
+        return decoded.scale(targetWidthPx, targetHeightPx).also {
             if (it !== decoded) decoded.recycle()
         }
     }
@@ -111,7 +113,7 @@ class DeltaSkinAssetLoader(
                 PdfRenderer(fd).use { renderer ->
                     renderer.openPage(0).use { page ->
                         val bitmap =
-                            Bitmap.createBitmap(targetWidthPx, targetHeightPx, Bitmap.Config.ARGB_8888)
+                            createBitmap(targetWidthPx, targetHeightPx)
                         // transform == null scales the page to fill the destination bitmap.
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         premultiplyInPlace(bitmap)

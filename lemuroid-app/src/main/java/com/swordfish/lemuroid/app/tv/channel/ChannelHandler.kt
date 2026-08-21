@@ -8,7 +8,9 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.VectorDrawable
 import android.media.tv.TvContract
-import android.net.Uri
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import androidx.tvprovider.media.tv.Channel
 import androidx.tvprovider.media.tv.ChannelLogoUtils
 import androidx.tvprovider.media.tv.PreviewProgram
@@ -79,16 +81,15 @@ class ChannelHandler(
         context: Context,
         resourceId: Int,
     ): Bitmap? {
-        val drawable = context.getDrawable(resourceId)
+        val drawable = AppCompatResources.getDrawable(context, resourceId)
         if (drawable is VectorDrawable) {
             val bitmap: Bitmap =
-                Bitmap.createBitmap(
-                    drawable.getIntrinsicWidth(),
-                    drawable.getIntrinsicHeight(),
-                    Bitmap.Config.ARGB_8888,
+                createBitmap(
+                    drawable.intrinsicWidth,
+                    drawable.intrinsicHeight,
                 )
             val canvas = Canvas(bitmap)
-            drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight())
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
             return bitmap
         }
@@ -133,7 +134,7 @@ class ChannelHandler(
 
         if (contentValues.isNotEmpty()) {
             appContext.contentResolver.bulkInsert(
-                Uri.parse("content://android.media.tv/preview_program"),
+                "content://android.media.tv/preview_program".toUri(),
                 contentValues.toTypedArray(),
             )
         }
@@ -167,9 +168,9 @@ class ChannelHandler(
                 .setPosterArtAspectRatio(TvContractCompat.PreviewProgramColumns.ASPECT_RATIO_1_1)
 
         if (game.coverFrontUrl != null && thumbnailExists) {
-            preview.setPosterArtUri(Uri.parse(game.coverFrontUrl))
+            preview.setPosterArtUri(game.coverFrontUrl!!.toUri())
         } else {
-            preview.setPosterArtUri(Uri.parse(CoverUtils.getFallbackRemoteUrl(game)))
+            preview.setPosterArtUri(CoverUtils.getFallbackRemoteUrl(game).toUri())
         }
 
         return preview.build()

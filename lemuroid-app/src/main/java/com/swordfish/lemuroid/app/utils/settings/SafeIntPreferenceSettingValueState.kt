@@ -3,7 +3,7 @@ package com.swordfish.lemuroid.app.utils.settings
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -30,7 +30,7 @@ class SafeIntPreferenceSettingValueState(
     val key: String,
     val defaultValue: Int = 0,
 ) : SettingValueState<Int> {
-    private var _value by mutableStateOf(preferences.safeGetInt(key, defaultValue))
+    private var _value by mutableIntStateOf(preferences.safeGetInt(key, defaultValue))
 
     override var value: Int
         set(value) {

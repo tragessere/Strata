@@ -1,14 +1,12 @@
 package com.swordfish.lemuroid.app.tv.input
 
 import android.os.Bundle
-import androidx.annotation.NonNull
 import androidx.leanback.app.GuidedStepSupportFragment
 import androidx.leanback.widget.GuidanceStylist
 import androidx.leanback.widget.GuidedAction
 import com.swordfish.lemuroid.R
 
 class TVGamePadBindingFragment : GuidedStepSupportFragment() {
-    @NonNull
     override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance {
         val title = requireArguments().getString(EXTRA_TITLE)
         val message = requireArguments().getString(EXTRA_MESSAGE)

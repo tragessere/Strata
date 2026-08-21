@@ -3,15 +3,16 @@ package com.swordfish.lemuroid.app.shared.deeplink
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.net.toUri
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 
 object DeepLink {
-    fun openLeanbackUri(appContext: Context): Uri = Uri.parse("lemuroid://${appContext.packageName}/open-leanback")
+    fun openLeanbackUri(appContext: Context): Uri = "lemuroid://${appContext.packageName}/open-leanback".toUri()
 
     private fun uriForGame(
         appContext: Context,
         game: Game,
-    ): Uri = Uri.parse("lemuroid://${appContext.packageName}/play-game/id/${game.id}")
+    ): Uri = "lemuroid://${appContext.packageName}/play-game/id/${game.id}".toUri()
 
     fun launchIntentForGame(
         appContext: Context,

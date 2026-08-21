@@ -2,7 +2,6 @@ package com.swordfish.lemuroid.app.tv.settings
 
 import android.os.Bundle
 import android.os.Environment
-import androidx.annotation.NonNull
 import androidx.leanback.app.GuidedStepSupportFragment
 import androidx.leanback.widget.GuidanceStylist
 import androidx.leanback.widget.GuidedAction
@@ -11,7 +10,6 @@ import com.swordfish.lemuroid.app.tv.folderpicker.TVFolderPickerActivity
 import java.io.File
 
 class TVGamePadBindingFragment : GuidedStepSupportFragment() {
-    @NonNull
     override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance {
         val title = resources.getString(R.string.tv_folder_storage_title)
         val description = resources.getString(R.string.tv_folder_picker_title)

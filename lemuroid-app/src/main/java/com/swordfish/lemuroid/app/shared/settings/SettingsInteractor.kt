@@ -1,6 +1,7 @@
 package com.swordfish.lemuroid.app.shared.settings
 
 import android.content.Context
+import androidx.core.content.edit
 import com.swordfish.lemuroid.app.shared.library.LibraryIndexScheduler
 import com.swordfish.lemuroid.app.shared.storage.cache.CacheCleanerWork
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
@@ -17,14 +18,10 @@ class SettingsInteractor(
     fun resetAllSettings() {
         SharedPreferencesHelper
             .getLegacySharedPreferences(context)
-            .edit()
-            .clear()
-            .apply()
+            .edit { clear() }
         SharedPreferencesHelper
             .getSharedPreferences(context)
-            .edit()
-            .clear()
-            .apply()
+            .edit { clear() }
         LibraryIndexScheduler.scheduleLibrarySync(context.applicationContext)
         CacheCleanerWork.enqueueCleanCacheAll(context.applicationContext)
         deleteDownloadedCores()

@@ -127,7 +127,6 @@ class MainTVActivity :
         companion object {
             @Provides
             @PerActivity
-            @JvmStatic
             fun gameInteractor(
                 activity: MainTVActivity,
                 retrogradeDb: RetrogradeDatabase,

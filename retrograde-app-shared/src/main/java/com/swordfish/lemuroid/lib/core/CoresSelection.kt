@@ -51,10 +51,9 @@ class CoresSelection(
         system: GameSystem,
         coreID: CoreID,
     ) = withContext(Dispatchers.IO) {
-        sharedPreferences
-            .edit()
-            .putString(computeSystemPreferenceKey(system.id), coreID.coreName)
-            .commit()
+        sharedPreferences.edit(commit = true) {
+            putString(computeSystemPreferenceKey(system.id), coreID.coreName)
+        }
     }
 
     suspend fun getCoreConfigForSystem(system: GameSystem): SystemCoreConfig =

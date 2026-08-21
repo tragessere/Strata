@@ -34,7 +34,6 @@ class TVSettingsActivity : TVBaseSettingsActivity() {
         companion object {
             @Provides
             @PerActivity
-            @JvmStatic
             fun settingsInteractor(
                 activity: TVSettingsActivity,
                 directoriesManager: DirectoriesManager,
@@ -42,7 +41,6 @@ class TVSettingsActivity : TVBaseSettingsActivity() {
 
             @Provides
             @PerActivity
-            @JvmStatic
             fun gamePadPreferencesHelper(inputDeviceManager: InputDeviceManager) =
                 GamePadPreferencesHelper(inputDeviceManager)
         }

@@ -1,6 +1,5 @@
 package com.swordfish.lemuroid.app.mobile.feature.settings.general
 
-import android.net.Uri
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -8,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.NavController
 import com.swordfish.lemuroid.R
@@ -204,7 +204,7 @@ private fun RomsSettings(
     val currentDirectoryName =
         remember(state.currentDirectory) {
             runCatching {
-                DocumentFile.fromTreeUri(context, Uri.parse(currentDirectory))?.name
+                DocumentFile.fromTreeUri(context, currentDirectory.toUri())?.name
             }.getOrNull() ?: emptyDirectory
         }
 

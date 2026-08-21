@@ -2,6 +2,8 @@ package com.swordfish.lemuroid.lib.core.assetsmanager
 
 import android.content.SharedPreferences
 import android.net.Uri
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import com.swordfish.lemuroid.lib.core.CoreUpdater
 import com.swordfish.lemuroid.lib.library.CoreID
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
@@ -60,10 +62,9 @@ class PPSSPPAssetsManager : CoreID.AssetsManager {
             }
         }
 
-        sharedPreferences
-            .edit()
-            .putString(PPSSPP_ASSETS_VERSION_KEY, PPSSPP_ASSETS_VERSION)
-            .commit()
+        sharedPreferences.edit(commit = true) {
+            putString(PPSSPP_ASSETS_VERSION_KEY, PPSSPP_ASSETS_VERSION)
+        }
     }
 
     private suspend fun updatedRequested(
@@ -88,8 +89,8 @@ class PPSSPPAssetsManager : CoreID.AssetsManager {
         const val PPSSPP_ASSETS_VERSION = "1.15"
 
         val PPSSPP_ASSETS_URL: Uri =
-            Uri
-                .parse("https://github.com/Swordfish90/LemuroidCores/")
+            "https://github.com/Swordfish90/LemuroidCores/"
+                .toUri()
                 .buildUpon()
                 .appendEncodedPath("raw/$PPSSPP_ASSETS_VERSION/assets/ppsspp.zip")
                 .build()
