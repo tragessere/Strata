@@ -1,6 +1,7 @@
 name: Publish
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "*"
@@ -8,11 +9,11 @@ on:
 jobs:
 
   build:
-    name: Build APK
+    name: Build release APKs
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -23,38 +24,65 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      # The secret holds the keystore base64 encoded, since a secret carries text and not a binary
+      # file. The signing config picks it up from the repository root by default.
       - name: Create release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
-          echo "${{ secrets.RELEASE_KEYSTORE }}" > release.keystore.asc
-          gpg -d --passphrase "${{ secrets.RELEASE_KEYSTORE_PASSPHRASE }}" --batch release.keystore.asc > release.jks
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.jks
+          if [ ! -s release.jks ]; then
+            echo "::error::RELEASE_KEYSTORE_BASE64 is empty or not valid base64"
+            exit 1
+          fi
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run Assemble Artifact
-        run: ./gradlew assembleFreeDynamic
+      # Both variants bundle the cores, so neither pulls in the dynamic feature modules. Building them
+      # in a single invocation lets gradle share everything but the flavor specific ext module.
+      - name: Assemble release APKs
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew assembleFreeBundleRelease assemblePlayBundleRelease
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3.1.0
+      - name: Upload free APK
+        uses: actions/upload-artifact@v4
         with:
-          name: apk
-          path: lemuroid-app/build/outputs/apk/freeDynamic/release/lemuroid-app-free-dynamic-release.apk
+          name: apk-free-bundle
+          path: lemuroid-app/build/outputs/apk/freeBundle/release/lemuroid-app-free-bundle-release.apk
+          if-no-files-found: error
+
+      - name: Upload play APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-play-bundle
+          path: lemuroid-app/build/outputs/apk/playBundle/release/lemuroid-app-play-bundle-release.apk
+          if-no-files-found: error
 
   publish_apk:
-    name: Publish APK on Github
+    name: Publish APKs on Github
     needs: [ build ]
     runs-on: ubuntu-latest
+    # A manual run is only ever asked for the artifacts above. Releases are cut from tags.
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
 
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v3.0.0
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: apk
+          path: artifacts
+          merge-multiple: true
 
       - name: Create pre-release
-        uses: "marvinpinto/action-automatic-releases@latest"
+        uses: softprops/action-gh-release@v2
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: true
-          title: "Pre-release"
-          files: lemuroid-app-free-dynamic-release.apk
+          name: "Pre-release"
+          files: |
+            artifacts/lemuroid-app-free-bundle-release.apk
+            artifacts/lemuroid-app-play-bundle-release.apk

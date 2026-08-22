@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -8,10 +10,20 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Loaded here rather than inside signingSecret() so it is read once, and before the android block
+// below asks for it.
+val localProperties =
+    Properties().apply {
+        val propertiesFile = rootProject.file("local.properties")
+        if (propertiesFile.exists()) {
+            propertiesFile.inputStream().use { load(it) }
+        }
+    }
+
 android {
     defaultConfig {
         versionCode = 252
-        versionName = "1.17.0" // Always remember to update Cores Tag!
+        versionName = "1.0.0" // Always remember to update Cores Tag!
         applicationId = "com.tragessere.strata"
     }
     flavorDimensions += listOf("opensource", "cores")
@@ -87,9 +99,9 @@ android {
 
         maybeCreate("release").apply {
             storeFile = file("$rootDir/release.jks")
-            keyAlias = "lemuroid"
-            storePassword = "lemuroid"
-            keyPassword = "lemuroid"
+            storePassword = signingSecret("RELEASE_STORE_PASSWORD", "lemuroid")
+            keyAlias = signingSecret("RELEASE_KEY_ALIAS", "lemuroid")
+            keyPassword = signingSecret("RELEASE_KEY_PASSWORD", "lemuroid")
         }
     }
 
@@ -98,6 +110,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs["release"]
+
+            // Published builds target 64 bit arm only. With the bundle flavor every extra abi is a
+            // full second copy of all twenty cores, which is over half of the apk. Debug builds keep
+            // every abi so x86_64 emulators still work.
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             resValue("string", "lemuroid_name", "Strata")
         }
@@ -211,6 +230,23 @@ dependencies {
     ksp(deps.libs.dagger.android.processor)
     ksp(deps.libs.dagger.compiler)
 }
+
+// Signing credentials are read from the environment, a gradle property, or local.properties, all
+// under the same name, so that they do not have to sit in source. Environment first because that is
+// how the publish workflow passes them in; local.properties is the local counterpart, and is already
+// gitignored. The fallbacks are the values the historical keystore used, which keeps builds working
+// for anyone who still has it.
+//
+// Blank is treated as absent on purpose: an unset repository secret expands to an empty string in a
+// workflow env block, and an empty alias or password is a confusing failure rather than a default.
+fun signingSecret(
+    name: String,
+    fallback: String,
+): String =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: (findProperty(name) as String?)?.takeIf { it.isNotBlank() }
+        ?: localProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+        ?: fallback
 
 fun usePlayDynamicFeatures(): Boolean {
     val task = gradle.startParameter.taskRequests.toString()

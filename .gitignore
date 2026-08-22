@@ -5,6 +5,7 @@ bin/
 gen/
 captures/
 classes/
+release/
 projectFilesBackup/
 project.properties
 .DS_Store
@@ -17,3 +18,4 @@ project.properties
 .externalNativeBuild
 local.properties
 release.jks
+release.jks.b64
