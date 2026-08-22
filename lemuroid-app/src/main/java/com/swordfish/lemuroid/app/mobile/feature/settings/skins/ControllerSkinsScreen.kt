@@ -55,7 +55,7 @@ fun ControllerSkinsScreen(
         }
 
         LemuroidCardSettingsGroup(
-            title = { Text(text = stringResource(R.string.controller_skins_by_system)) },
+            title = { Text(text = stringResource(R.string.controller_skins_systems)) },
         ) {
             state.systems.forEach { systemSkins ->
                 val systemName = stringResource(GameSystem.findById(systemSkins.systemID.dbname).shortTitleResId)

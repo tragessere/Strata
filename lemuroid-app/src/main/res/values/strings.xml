@@ -49,7 +49,7 @@
     <string name="controller_skins_import">Import skin</string>
     <string name="controller_skins_import_description">Select a .deltaskin file to install</string>
     <string name="controller_skins_import_error">Couldn\'t import skin. Make sure it\'s a valid .deltaskin file.</string>
-    <string name="controller_skins_by_system">By system</string>
+    <string name="controller_skins_systems">Systems</string>
     <string name="controller_skins_system_summary">Portrait: %1$s · Landscape: %2$s</string>
     <string name="controller_skins_default">Default</string>
     <string name="controller_skins_portrait">Portrait</string>
