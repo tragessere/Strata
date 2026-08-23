@@ -39,20 +39,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Both variants bundle the cores, so neither pulls in the dynamic feature modules. Building them
-      # in a single invocation lets gradle share everything but the flavor specific ext module.
+      # Use dynamic flavor for 'free' version to reduce the download size. For the Play version, bundle
+      # all of the cores instead since we can't download from Google Play.
       - name: Assemble release APKs
         env:
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew assembleFreeBundleRelease assemblePlayBundleRelease
+        run: ./gradlew assembleFreeDynamicRelease assemblePlayBundleRelease
 
       - name: Upload free APK
         uses: actions/upload-artifact@v4
         with:
-          name: apk-free-bundle
-          path: lemuroid-app/build/outputs/apk/freeBundle/release/lemuroid-app-free-bundle-release.apk
+          name: apk-free-dynamic
+          path: lemuroid-app/build/outputs/apk/freeDynamic/release/lemuroid-app-free-dynamic-release.apk
           if-no-files-found: error
 
       - name: Upload play APK
@@ -84,5 +84,5 @@ jobs:
           prerelease: true
           name: "Pre-release"
           files: |
-            artifacts/lemuroid-app-free-bundle-release.apk
+            artifacts/lemuroid-app-free-dynamic-release.apk
             artifacts/lemuroid-app-play-bundle-release.apk
