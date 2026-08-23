@@ -22,7 +22,7 @@ val localProperties =
 
 android {
     defaultConfig {
-        versionCode = 252
+        versionCode = 253
         versionName = "1.0.0" // Always remember to update Cores Tag!
         applicationId = "com.tragessere.strata"
     }
