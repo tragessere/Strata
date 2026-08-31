@@ -55,7 +55,7 @@ class SkinOrientationViewModel(
     data class SkinOption(
         val id: String,
         val name: String,
-        val preview: SkinPreview?,
+        val preview: SkinPreview,
     )
 
     data class State(
@@ -80,13 +80,14 @@ class SkinOrientationViewModel(
         return deltaSkinManager
             .listSkins()
             .filter { DeltaSkinSystemMapping.isCompatible(it.info.gameTypeIdentifier, system) }
-            .map { handle ->
+            .mapNotNull { handle ->
                 val representation =
                     deltaSkinManager.resolveRepresentation(handle.info, isTablet, orientationName)
+                        ?: return@mapNotNull null
                 SkinOption(
                     id = handle.id,
                     name = handle.info.name,
-                    preview = representation?.let { SkinPreview(handle.directory, it) },
+                    preview = SkinPreview(handle.directory, representation),
                 )
             }
     }
