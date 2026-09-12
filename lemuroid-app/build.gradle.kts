@@ -22,8 +22,8 @@ val localProperties =
 
 android {
     defaultConfig {
-        versionCode = 253
-        versionName = "1.0.0" // Always remember to update Cores Tag!
+        versionCode = 254
+        versionName = "1.0.1" // Always remember to update Cores Tag!
         applicationId = "com.tragessere.strata"
     }
     flavorDimensions += listOf("opensource", "cores")
