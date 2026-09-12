@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlin.time.Duration.Companion.milliseconds
 
 class BaseGameScreenViewModel(
     private val appContext: Context,
@@ -300,7 +301,7 @@ class BaseGameScreenViewModel(
     suspend fun reset() =
         withLoading {
             try {
-                delay(appContext.longAnimationDuration().toLong())
+                delay(appContext.longAnimationDuration().toLong().milliseconds)
                 retroGameView.retroGameViewFlow().reset()
             } catch (e: Throwable) {
                 Timber.e(e, "Error in reset")

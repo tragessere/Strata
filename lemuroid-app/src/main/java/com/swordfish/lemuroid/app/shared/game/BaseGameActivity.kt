@@ -50,6 +50,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(DelicateCoroutinesApi::class)
 abstract class BaseGameActivity : ImmersiveActivity() {
@@ -174,7 +175,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     }
 
     private fun setUpExceptionsHandler() {
-        Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
+        Thread.setDefaultUncaughtExceptionHandler { _, exception ->
             performUnexpectedErrorFinish(exception)
         }
     }
@@ -285,17 +286,36 @@ abstract class BaseGameActivity : ImmersiveActivity() {
             .getSideEffects()
             .collect {
                 when (it) {
-                    is GameViewModelSideEffects.UiEffect.ShowMenu ->
+                    is GameViewModelSideEffects.UiEffect.ShowMenu -> {
                         displayOptionsDialog(
                             it.currentTiltConfiguration,
                             it.tiltConfigurations,
                         )
-                    is GameViewModelSideEffects.UiEffect.ShowToast -> displayToast(it.message)
-                    is GameViewModelSideEffects.UiEffect.SuccessfulFinish -> performSuccessfulActivityFinish()
-                    is GameViewModelSideEffects.UiEffect.FailureFinish -> performErrorFinish(it.message)
-                    is GameViewModelSideEffects.UiEffect.SaveQuickSave -> performSaveQuickSave()
-                    is GameViewModelSideEffects.UiEffect.LoadQuickSave -> performLoadQuickSave()
-                    is GameViewModelSideEffects.UiEffect.ToggleFastForward -> performToggleFastForward()
+                    }
+
+                    is GameViewModelSideEffects.UiEffect.ShowToast -> {
+                        displayToast(it.message)
+                    }
+
+                    is GameViewModelSideEffects.UiEffect.SuccessfulFinish -> {
+                        performSuccessfulActivityFinish()
+                    }
+
+                    is GameViewModelSideEffects.UiEffect.FailureFinish -> {
+                        performErrorFinish(it.message)
+                    }
+
+                    is GameViewModelSideEffects.UiEffect.SaveQuickSave -> {
+                        performSaveQuickSave()
+                    }
+
+                    is GameViewModelSideEffects.UiEffect.LoadQuickSave -> {
+                        performLoadQuickSave()
+                    }
+
+                    is GameViewModelSideEffects.UiEffect.ToggleFastForward -> {
+                        performToggleFastForward()
+                    }
                 }
             }
     }
@@ -378,7 +398,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     private fun finishAndExitProcess() {
         onFinishTriggered()
         GlobalScope.launch {
-            delay(animationDuration().toLong())
+            delay(animationDuration().toLong().milliseconds)
             GameService.requestTermination()
         }
         finish()

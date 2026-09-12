@@ -98,7 +98,7 @@ class GameViewModelRetroGameView(
             applyAudioEnabled()
         }
 
-    fun getGameState(): Flow<GameState> = gameState.debounce(200)
+    fun getGameState(): Flow<GameState> = gameState.debounce(200.milliseconds)
 
     suspend fun initialize(
         applicationContext: Context,
@@ -146,7 +146,7 @@ class GameViewModelRetroGameView(
                         ""
                     }
                 sideEffects.requestFailureFinish(message)
-            }.debounce(200)
+            }.debounce(200.milliseconds)
             .collect { loadingState ->
                 gameState.value =
                     if (loadingState is GameLoader.LoadingState.Ready) {
@@ -323,7 +323,9 @@ class GameViewModelRetroGameView(
                 appContext.getString(R.string.game_loading_preparing_game)
             }
 
-            else -> ""
+            else -> {
+                ""
+            }
         }
 
     private fun printRetroVariables(retroGameView: GLRetroView) {
@@ -420,21 +422,27 @@ class GameViewModelRetroGameView(
                 is GameLoaderError.GLIncompatible -> {
                     appContext.getString(R.string.game_loader_error_gl_incompatible)
                 }
+
                 is GameLoaderError.Generic -> {
                     appContext.getString(R.string.game_loader_error_generic)
                 }
+
                 is GameLoaderError.LoadCore -> {
                     appContext.getString(com.swordfish.lemuroid.ext.R.string.game_loader_error_load_core)
                 }
+
                 is GameLoaderError.LoadGame -> {
                     appContext.getString(R.string.game_loader_error_load_game)
                 }
+
                 is GameLoaderError.Saves -> {
                     appContext.getString(R.string.game_loader_error_save)
                 }
+
                 is GameLoaderError.UnsupportedArchitecture -> {
                     appContext.getString(R.string.game_loader_error_unsupported_architecture)
                 }
+
                 is GameLoaderError.MissingBiosFiles -> {
                     appContext.getString(R.string.game_loader_error_missing_bios, gameError.missingFiles)
                 }
