@@ -45,6 +45,7 @@ import com.swordfish.touchinput.radial.sensors.TiltConfiguration
 import dagger.Lazy
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -222,7 +223,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                 this.putExtra(GameMenuContract.EXTRA_SYSTEM_CORE_CONFIG, systemCoreConfig)
                 this.putExtra(
                     GameMenuContract.EXTRA_AUDIO_ENABLED,
-                    baseGameScreenViewModel.retroGameView.retroGameView?.audioEnabled,
+                    baseGameScreenViewModel.retroGameView.audioEnabled,
                 )
                 this.putExtra(GameMenuContract.EXTRA_FAST_FORWARD_SUPPORTED, system.fastForwardSupport)
                 this.putExtra(
@@ -237,7 +238,12 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                     baseGameScreenViewModel.isControllerSkinActive(),
                 )
             }
-        prepareGameMenu(baseGameScreenViewModel.retroGameView.retroGameView)
+        // Opening the menu pauses the game, so its audio is emptied out first and both run while
+        // the menu is held up: whichever takes longer decides, and neither waits on the other.
+        coroutineScope {
+            launch { baseGameScreenViewModel.retroGameView.silenceAudioForPause() }
+            prepareGameMenu(baseGameScreenViewModel.retroGameView.retroGameView)
+        }
         startActivityForResult(intent, DIALOG_REQUEST)
         applyGameMenuOpenTransition()
     }
@@ -434,13 +440,11 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                 baseGameScreenViewModel.retroGameView.retroGameView?.changeDisk(index)
             }
             if (data?.hasExtra(GameMenuContract.RESULT_ENABLE_AUDIO) == true) {
-                baseGameScreenViewModel.retroGameView.retroGameView?.apply {
-                    this.audioEnabled =
-                        data.getBooleanExtra(
-                            GameMenuContract.RESULT_ENABLE_AUDIO,
-                            true,
-                        )
-                }
+                baseGameScreenViewModel.retroGameView.audioEnabled =
+                    data.getBooleanExtra(
+                        GameMenuContract.RESULT_ENABLE_AUDIO,
+                        true,
+                    )
             }
             if (data?.hasExtra(GameMenuContract.RESULT_ENABLE_FAST_FORWARD) == true) {
                 baseGameScreenViewModel.retroGameView.retroGameView?.apply {

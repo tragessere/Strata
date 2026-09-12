@@ -311,6 +311,11 @@ class BaseGameScreenViewModel(
         if (loadingState.value) return
         viewModelScope.launch {
             withLoading {
+                // Quitting pauses the emulator on the way out, so the buffer has to be emptied
+                // first or its tail is what the library hears over the closing animation. When the
+                // quit comes from the game menu the buffer is already empty and this only has to
+                // hold the mute through the resume that closing the menu performs.
+                retroGameView.silenceAudioForShutdown()
                 val snapshot = saves.captureSaveSnapshot(true) ?: return@launch
                 saves.writeSaveSnapshot(snapshot)
                 sideEffects.requestSuccessfulFinish()

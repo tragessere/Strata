@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(FlowPreview::class)
@@ -75,6 +76,27 @@ class GameViewModelRetroGameView(
 
     private val retroGameViewFlow = MutableStateFlow<GLRetroView?>(null)
     var retroGameView: GLRetroView? by MutableStateProperty(retroGameViewFlow)
+
+    /** Whether the player wants to hear the game, as opposed to whether it is audible right now. */
+    private var isAudioRequested = true
+
+    /** True while audio is being held back ahead of a pause. See [silenceAudioForPause]. */
+    private var isAudioSilenced = false
+
+    /** True once audio has been silenced for a pause the game will never come back from. */
+    private var isAudioSilencedForShutdown = false
+
+    /**
+     * The audio setting as the player left it. Reading the emulator directly would instead report
+     * whatever [silenceAudioForPause] has done to it, and the game menu is opened through exactly
+     * that path, so it would show itself muted every time it is opened.
+     */
+    var audioEnabled: Boolean
+        get() = isAudioRequested
+        set(value) {
+            isAudioRequested = value
+            applyAudioEnabled()
+        }
 
     fun getGameState(): Flow<GameState> = gameState.debounce(200)
 
@@ -181,7 +203,46 @@ class GameViewModelRetroGameView(
         retroGameViewFlow.value = result
         gameState.value = GameState.Ready
 
+        applyAudioEnabled()
+
         return currentState.gameData to result
+    }
+
+    /**
+     * Stops the emulator queueing audio and waits for what it has already queued to play out, so
+     * that the pause which follows lands on a buffer that is already empty. The next resume gives
+     * the game its audio back.
+     *
+     * LibretroDroid stops its audio stream when the game pauses and starts it again on resume
+     * without ever flushing it, so the tail left in the buffer - up to a tenth of a second of it -
+     * is replayed on the way back in, ahead of anything the emulator has produced since. That
+     * replay is the stutter. The same sound is lost either way; draining it first simply leaves
+     * nothing behind to repeat.
+     */
+    suspend fun silenceAudioForPause() = silenceAudio(forShutdown = false)
+
+    /**
+     * The same, for the way out of the game, where no resume may undo it.
+     *
+     * Quitting from the game menu closes that menu first, which resumes the game underneath it for
+     * the moment it takes to write the save and finish, and a resume is otherwise exactly what
+     * hands the emulator its audio back.
+     */
+    suspend fun silenceAudioForShutdown() = silenceAudio(forShutdown = true)
+
+    private suspend fun silenceAudio(forShutdown: Boolean) {
+        isAudioSilencedForShutdown = isAudioSilencedForShutdown || forShutdown
+
+        // Silent already means drained already: whoever silenced it has waited that out.
+        if (isAudioSilenced) return
+
+        isAudioSilenced = true
+        applyAudioEnabled()
+        delay(AUDIO_DRAIN_DURATION)
+    }
+
+    private fun applyAudioEnabled() {
+        retroGameView?.audioEnabled = isAudioRequested && !isAudioSilenced
     }
 
     suspend fun retroGameViewFlow() =
@@ -291,6 +352,18 @@ class GameViewModelRetroGameView(
         }
     }
 
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+
+        // Everything past the point of no return is teardown, and the resume that closing the game
+        // menu performs on the way there must not hand the emulator its audio back for it.
+        if (isAudioSilencedForShutdown) return
+
+        // Whatever the pause was for is over, and the buffer it left behind has already played out.
+        isAudioSilenced = false
+        applyAudioEnabled()
+    }
+
     private suspend fun initializeCoreVariablesFlow() {
         try {
             waitRetroGameViewInitialized()
@@ -368,5 +441,13 @@ class GameViewModelRetroGameView(
             }
 
         return message
+    }
+
+    companion object {
+        /**
+         * Long enough to cover the emulator's audio buffer, which holds around a tenth of a second
+         * and is only ever drained by playing it.
+         */
+        private val AUDIO_DRAIN_DURATION = 250.milliseconds
     }
 }
