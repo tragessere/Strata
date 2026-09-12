@@ -101,6 +101,11 @@ class TVGameMenuFragment(
         saveScreen?.isEnabled = systemCoreConfig.statesSupported
         loadScreen?.isEnabled = systemCoreConfig.statesSupported
 
+        if (loadScreen != null) {
+            val autoSaveInfo = statesManager.getAutoSaveInfo(game, systemCoreConfig.coreID)
+            GameMenuHelper.addAutoSaveLoadPreference(loadScreen, autoSaveInfo)
+        }
+
         val slotsInfo = statesManager.getSavedSlotsInfo(game, systemCoreConfig.coreID)
 
         slotsInfo.forEachIndexed { index, saveInfo ->

@@ -11,6 +11,7 @@ import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 import java.io.File
 
 class StatesManager(
@@ -57,13 +58,30 @@ class StatesManager(
         getSaveState(getAutoSaveFileName(game), coreID.coreName)
     }
 
+    /**
+     * Writes [saveState] as the auto-save for [game], reporting whether it landed.
+     *
+     * An empty state is not a state and is never written. A core which fails to serialize hands one
+     * back rather than reporting the failure, and writing it would replace a working auto-save with
+     * a file which looks perfectly valid from the outside: recent, non empty once compressed, and
+     * impossible to restore. Refusing it leaves the previous auto-save in place, older than the
+     * session which was meant to replace it, which is the state the next launch can recognise.
+     */
     suspend fun setAutoSave(
         game: Game,
         coreID: CoreID,
         saveState: SaveState,
-    ) = withContext(Dispatchers.IO) {
-        setSaveState(getAutoSaveFileName(game), coreID.coreName, saveState)
-    }
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            if (saveState.state.isEmpty()) {
+                Timber.e("Refusing to write an empty auto-save state for ${game.fileName}")
+                return@withContext false
+            }
+
+            setSaveState(getAutoSaveFileName(game), coreID.coreName, saveState)
+                .onFailure { Timber.e(it, "Unable to write the auto-save state for ${game.fileName}") }
+                .isSuccess
+        }
 
     suspend fun getSavedSlotsInfo(
         game: Game,
@@ -102,12 +120,11 @@ class StatesManager(
         fileName: String,
         coreName: String,
         saveState: SaveState,
-    ) {
+    ): Result<Unit> =
         runCatchingWithRetry(FILE_ACCESS_RETRIES) {
             writeStateToDisk(fileName, coreName, saveState.state)
             writeMetadataToDisk(fileName, coreName, saveState.metadata)
         }
-    }
 
     private fun writeMetadataToDisk(
         fileName: String,

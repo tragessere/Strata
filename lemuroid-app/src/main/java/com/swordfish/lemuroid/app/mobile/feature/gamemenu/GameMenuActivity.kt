@@ -233,12 +233,17 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                             application,
                                             gameMenuRequest,
                                             statesManager,
-                                            false,
+                                            disableMissingEntries = false,
+                                            // The auto-save is written by the session ending, not by
+                                            // the player, so there is nothing to save into here.
+                                            includeAutoSave = false,
                                             statesPreviewManager,
                                         ),
                                 ),
-                                onStateClicked = {
-                                    dismissWithResult { putExtra(GameMenuContract.RESULT_SAVE, it) }
+                                includeAutoSave = false,
+                                onStateClicked = { entry ->
+                                    val slot = entry.slot ?: return@GameMenuStatesScreen
+                                    dismissWithResult { putExtra(GameMenuContract.RESULT_SAVE, slot) }
                                 },
                             )
                         }
@@ -250,12 +255,21 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                             application,
                                             gameMenuRequest,
                                             statesManager,
-                                            true,
+                                            disableMissingEntries = true,
+                                            includeAutoSave = true,
                                             statesPreviewManager,
                                         ),
                                 ),
-                                onStateClicked = {
-                                    dismissWithResult { putExtra(GameMenuContract.RESULT_LOAD, it) }
+                                includeAutoSave = true,
+                                onStateClicked = { entry ->
+                                    val slot = entry.slot
+                                    if (slot == null) {
+                                        dismissWithResult {
+                                            putExtra(GameMenuContract.RESULT_LOAD_AUTO_SAVE, true)
+                                        }
+                                    } else {
+                                        dismissWithResult { putExtra(GameMenuContract.RESULT_LOAD, slot) }
+                                    }
                                 },
                             )
                         }

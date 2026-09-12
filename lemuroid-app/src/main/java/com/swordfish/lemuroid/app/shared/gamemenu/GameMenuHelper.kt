@@ -129,6 +129,29 @@ object GameMenuHelper {
         )
     }
 
+    /**
+     * The state the last session left behind, offered alongside the slots so it can be reached on
+     * purpose when a launch decided not to resume into it.
+     */
+    fun addAutoSaveLoadPreference(
+        screen: PreferenceScreen,
+        autoSaveInfo: SaveInfo,
+    ) {
+        screen.addPreference(
+            Preference(screen.context, null).apply {
+                this.key = LOAD_AUTO_SAVE
+                this.summary =
+                    if (autoSaveInfo.exists) {
+                        getSaveStateDescription(autoSaveInfo)
+                    } else {
+                        context.getString(R.string.game_menu_state_auto_save_missing)
+                    }
+                this.isEnabled = autoSaveInfo.exists
+                this.title = context.getString(R.string.game_menu_state_auto_save)
+            },
+        )
+    }
+
     fun onPreferenceTreeClicked(
         activity: Activity?,
         preference: Preference?,
@@ -142,6 +165,14 @@ object GameMenuHelper {
             "pref_game_load_1" -> handleLoadAction(activity, 1)
             "pref_game_load_2" -> handleLoadAction(activity, 2)
             "pref_game_load_3" -> handleLoadAction(activity, 3)
+            LOAD_AUTO_SAVE -> {
+                val resultIntent =
+                    Intent().apply {
+                        putExtra(GameMenuContract.RESULT_LOAD_AUTO_SAVE, true)
+                    }
+                setResultAndFinish(activity, resultIntent)
+                true
+            }
             "pref_game_mute" -> {
                 val currentValue = (preference as SwitchPreference).isChecked
                 val resultIntent =
@@ -247,4 +278,5 @@ object GameMenuHelper {
     const val SECTION_CHANGE_DISK = "pref_game_section_change_disk"
     const val SECTION_SAVE_GAME = "pref_game_section_save"
     const val SECTION_LOAD_GAME = "pref_game_section_load"
+    private const val LOAD_AUTO_SAVE = "pref_game_load_auto_save"
 }

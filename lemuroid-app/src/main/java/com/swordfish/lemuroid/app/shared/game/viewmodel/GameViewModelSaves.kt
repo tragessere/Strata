@@ -34,6 +34,25 @@ class GameViewModelSaves(
 ) {
     private var currentQuickSave: SaveState? = null
 
+    /**
+     * Whether states are being auto-saved, as last read from the settings.
+     *
+     * The setting itself is only readable from a coroutine, and the snapshot taken as the game is
+     * backgrounded cannot afford to wait for one, so it is kept here from [primeSettings] onwards.
+     * Until then it stands at what the setting defaults to, which errs towards writing a state that
+     * will not be resumed rather than skipping one that would have been.
+     */
+    @Volatile
+    private var autoSaveEnabled: Boolean = systemCoreConfig.statesSupported
+
+    /**
+     * The save file as it was last known to be on disk, so that an unchanged one is not rewritten.
+     *
+     * Comparing against it is what turns the poll below into a way of noticing that the game wrote
+     * its save, which libretro gives a frontend no other way of hearing about.
+     */
+    private var lastPersistedSaveRAM: ByteArray? = null
+
     data class SaveSnapshot(
         val sram: ByteArray,
         val autoSave: SaveState?,
@@ -70,10 +89,84 @@ class GameViewModelSaves(
         }
     }
 
+    /** Seeds [lastPersistedSaveRAM] with the save the core was handed, which is what is on disk. */
+    fun onSaveRAMLoaded(saveRAM: ByteArray?) {
+        lastPersistedSaveRAM = saveRAM
+    }
+
+    /**
+     * Persists the game's save file for as long as the session is running, whenever the game writes
+     * to it.
+     *
+     * Until this existed, a save the player made in game lived only in the core's memory until the
+     * session ended, and the write at the end of a session is the least dependable moment there is.
+     * A process killed while the game sat in the background took the in game save with it, which is
+     * the loss the player actually notices, states being a convenience on top of it.
+     *
+     * libretro has no way of telling a frontend that a game has written its save, so the only way
+     * to know is to look. The save is small, kilobytes rather than the megabytes a state runs to,
+     * and reading it costs the emulator a memcpy between frames, so looking often is cheap. Writing
+     * is not, and only happens when the bytes have actually changed, which is also what keeps the
+     * modification time meaning "when the game last saved" rather than "when we last looked".
+     *
+     * Only the save is written here, never a state. Serializing one means stopping the emulator
+     * mid frame for as long as the core takes, which on the larger systems is several frames, and
+     * a stutter at the moment the player saves in game is a poor trade for something the coherency
+     * engine already covers: a save newer than the state is exactly what makes the next launch cold
+     * boot into it rather than resume somewhere behind it.
+     */
+    suspend fun persistSaveRAMWhileRunning() {
+        while (true) {
+            delay(SAVE_RAM_POLL_INTERVAL_MS)
+            runCatching { persistSaveRAMIfChanged() }
+                .onFailure { Timber.e(it, "Unable to persist the save file mid session") }
+        }
+    }
+
+    private suspend fun persistSaveRAMIfChanged() {
+        val retroGameView = retroGameView.retroGameView ?: return
+
+        val saveRAM = withContext(Dispatchers.IO) { retroGameView.serializeSRAM(true) }
+        if (saveRAM.isEmpty() || saveRAM.contentEquals(lastPersistedSaveRAM)) return
+
+        Timber.i("The game wrote its save file. Persisting it.")
+        if (savesManager.setSaveRAM(game, saveRAM)) {
+            lastPersistedSaveRAM = saveRAM
+        }
+    }
+
+    /** Reads the auto-save setting once, so that [captureBackgroundSaveSnapshot] can act on it. */
+    suspend fun primeSettings() {
+        autoSaveEnabled = isAutoSaveEnabled()
+    }
+
     suspend fun captureSaveSnapshot(useEmulationThread: Boolean): SaveSnapshot? {
-        val retroGameView = retroGameView.retroGameView ?: return null
+        autoSaveEnabled = isAutoSaveEnabled()
+        return buildSaveSnapshot(useEmulationThread)
+    }
+
+    /**
+     * The snapshot to persist as the game is put into the background, read on the caller's thread.
+     *
+     * This has to happen while the activity is still being stopped. The emulator is torn down with
+     * it, and a capture handed to another thread first loses that race often enough to matter: the
+     * view is gone by the time it runs, nothing is captured, and the session's progress is dropped
+     * with no sign that it happened beyond an auto-save which is quietly one session behind. Only
+     * the writing is deferred, which is plain file IO and safe to finish afterwards.
+     *
+     * The emulation thread is already paused by this point, so the emulator is read directly rather
+     * than through it, which would wait for a thread that is never going to run the work.
+     */
+    fun captureBackgroundSaveSnapshot(): SaveSnapshot? = buildSaveSnapshot(useEmulationThread = false)
+
+    private fun buildSaveSnapshot(useEmulationThread: Boolean): SaveSnapshot? {
+        val retroGameView =
+            retroGameView.retroGameView ?: run {
+                Timber.e("Unable to capture a save snapshot: the emulator is already gone")
+                return null
+            }
         val sramState = retroGameView.serializeSRAM(useEmulationThread)
-        val autoSaveState = if (isAutoSaveEnabled()) getCurrentSaveState(useEmulationThread) else null
+        val autoSaveState = if (autoSaveEnabled) getCurrentSaveState(useEmulationThread) else null
         return SaveSnapshot(sramState, autoSaveState)
     }
 
@@ -86,8 +179,16 @@ class GameViewModelSaves(
             true,
             snapshot.autoSave != null,
         )
-        savesManager.setSaveRAM(game, snapshot.sram)
-        snapshot.autoSave?.let { statesManager.setAutoSave(game, systemCoreConfig.coreID, it) }
+        if (savesManager.setSaveRAM(game, snapshot.sram)) {
+            lastPersistedSaveRAM = snapshot.sram
+        }
+
+        val autoSave = snapshot.autoSave ?: return
+        if (!statesManager.setAutoSave(game, systemCoreConfig.coreID, autoSave)) {
+            // The state on disk is now older than the session which should have replaced it, which
+            // is what makes the next launch cold boot instead of resuming somewhere behind here.
+            Timber.e("The auto-save state was not written. The next launch will not resume into it.")
+        }
     }
 
     // On some cores unserialize fails with no reason. So we need to try multiple times.
@@ -112,8 +213,17 @@ class GameViewModelSaves(
             } else {
                 0
             }
+
+        // A core which cannot serialize hands back an empty array rather than reporting it, and an
+        // empty state written out is a file which looks valid and restores into nothing.
+        val state = retroGameView.serializeState(useEmulationThread)
+        if (state.isEmpty()) {
+            Timber.e("The core serialized an empty state for ${game.fileName}. Discarding it.")
+            return null
+        }
+
         return SaveState(
-            retroGameView.serializeState(useEmulationThread),
+            state,
             SaveState.Metadata(currentDisk, systemCoreConfig.statesVersion),
         )
     }
@@ -160,6 +270,38 @@ class GameViewModelSaves(
         return retroGameView.unserializeState(saveState.state)
     }
 
+    /**
+     * Restores the auto-save, the state the last session left behind, on request from the menu.
+     *
+     * A launch will refuse to resume into one it cannot vouch for, so this is how a player gets back
+     * to it when it was the one they wanted after all.
+     */
+    suspend fun loadAutoSave() {
+        try {
+            val autoSave = statesManager.getAutoSave(game, systemCoreConfig.coreID)
+            if (autoSave == null) {
+                sideEffects.showToast(appContext.getString(R.string.game_toast_load_state_failed))
+                return
+            }
+
+            val loaded =
+                withContext(Dispatchers.IO) {
+                    loadSaveState(autoSave)
+                }
+
+            if (!loaded) {
+                sideEffects.showToast(appContext.getString(R.string.game_toast_load_state_failed))
+            }
+        } catch (e: Throwable) {
+            val errorMessageId =
+                when (e) {
+                    is IncompatibleStateException -> R.string.error_message_incompatible_state
+                    else -> R.string.game_toast_load_state_failed
+                }
+            sideEffects.showToast(appContext.getString(errorMessageId))
+        }
+    }
+
     fun saveQuickSave() {
         currentQuickSave = getCurrentSaveState()
         sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_saved))
@@ -168,5 +310,17 @@ class GameViewModelSaves(
     fun loadQuickSave() {
         loadSaveState(currentQuickSave ?: return)
         sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_loaded))
+    }
+
+    companion object {
+        /**
+         * How often the game's save file is checked for changes.
+         *
+         * This bounds how much of an in game save can be lost to the process dying without the
+         * session ending first, which is a crash or a kill while the game is in the foreground:
+         * leaving the app writes the save outright and does not wait for the poll. Cheap enough at
+         * this rate to not be worth tuning per system.
+         */
+        private const val SAVE_RAM_POLL_INTERVAL_MS = 30_000L
     }
 }

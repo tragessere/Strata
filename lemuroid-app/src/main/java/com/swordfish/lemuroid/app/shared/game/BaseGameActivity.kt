@@ -36,6 +36,7 @@ import com.swordfish.lemuroid.lib.library.ExposedSetting
 import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.SystemCoreConfig
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.saves.SavesCoherencyEngine
 import com.swordfish.lemuroid.lib.saves.SavesManager
 import com.swordfish.lemuroid.lib.saves.StatesManager
 import com.swordfish.lemuroid.lib.saves.StatesPreviewManager
@@ -63,6 +64,9 @@ abstract class BaseGameActivity : ImmersiveActivity() {
 
     @Inject
     lateinit var savesManager: SavesManager
+
+    @Inject
+    lateinit var savesCoherencyEngine: SavesCoherencyEngine
 
     @Inject
     lateinit var statesPreviewManager: StatesPreviewManager
@@ -119,6 +123,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                 savesManager,
                 statesManager,
                 statesPreviewManager,
+                savesCoherencyEngine,
                 coreVariablesManager,
                 rumbleManager,
             )
@@ -414,6 +419,11 @@ abstract class BaseGameActivity : ImmersiveActivity() {
             if (data?.hasExtra(GameMenuContract.RESULT_LOAD) == true) {
                 GlobalScope.launch {
                     baseGameScreenViewModel.loadSlot(data.getIntExtra(GameMenuContract.RESULT_LOAD, 0))
+                }
+            }
+            if (data?.getBooleanExtra(GameMenuContract.RESULT_LOAD_AUTO_SAVE, false) == true) {
+                GlobalScope.launch {
+                    baseGameScreenViewModel.loadAutoSave()
                 }
             }
             if (data?.getBooleanExtra(GameMenuContract.RESULT_QUIT, false) == true) {

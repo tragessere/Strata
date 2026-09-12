@@ -122,6 +122,12 @@ class GameLoader(
                         }
                     }.getOrElse { throw GameLoaderException(GameLoaderError.Saves) }
 
+                // Recorded once the decision above has read the previous session, and before the
+                // core is handed anything to run, so that the auto-save this session is expected to
+                // write is always the newer of the two. A session which ends without writing one
+                // leaves the record behind for the next launch to notice.
+                savesCoherencyEngine.onSessionStarted(game, systemCoreConfig.coreID)
+
                 val coreVariables =
                     coreVariablesManager
                         .getOptionsForCore(system.id, systemCoreConfig)

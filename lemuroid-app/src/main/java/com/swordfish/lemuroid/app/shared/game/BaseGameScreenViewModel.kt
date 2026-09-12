@@ -2,11 +2,13 @@ package com.swordfish.lemuroid.app.shared.game
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -23,6 +25,7 @@ import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.app.shared.rumble.RumbleManager
 import com.swordfish.lemuroid.app.shared.settings.ControllerConfigsManager
 import com.swordfish.lemuroid.app.shared.settings.HapticFeedbackMode
+import com.swordfish.lemuroid.common.coroutines.launchOnState
 import com.swordfish.lemuroid.common.longAnimationDuration
 import com.swordfish.lemuroid.lib.controller.ControllerConfig
 import com.swordfish.lemuroid.lib.core.CoreVariablesManager
@@ -32,6 +35,7 @@ import com.swordfish.lemuroid.lib.library.SystemCoreConfig
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 import com.swordfish.lemuroid.lib.library.skin.DeltaSkinManager
+import com.swordfish.lemuroid.lib.saves.SavesCoherencyEngine
 import com.swordfish.lemuroid.lib.saves.SavesManager
 import com.swordfish.lemuroid.lib.saves.StatesManager
 import com.swordfish.lemuroid.lib.saves.StatesPreviewManager
@@ -49,16 +53,17 @@ import timber.log.Timber
 
 class BaseGameScreenViewModel(
     private val appContext: Context,
-    game: Game,
+    private val game: Game,
     settingsManager: SettingsManager,
     inputDeviceManager: InputDeviceManager,
     controllerConfigsManager: ControllerConfigsManager,
     system: GameSystem,
-    systemCoreConfig: SystemCoreConfig,
+    private val systemCoreConfig: SystemCoreConfig,
     sharedPreferences: SharedPreferences,
     savesManager: SavesManager,
     statesManager: StatesManager,
     statesPreviewManager: StatesPreviewManager,
+    private val savesCoherencyEngine: SavesCoherencyEngine,
     coreVariablesManager: CoreVariablesManager,
     rumbleManager: RumbleManager,
 ) : ViewModel(),
@@ -75,6 +80,7 @@ class BaseGameScreenViewModel(
         private val savesManager: SavesManager,
         private val statesManager: StatesManager,
         private val statesPreviewManager: StatesPreviewManager,
+        private val savesCoherencyEngine: SavesCoherencyEngine,
         private val coreVariablesManager: CoreVariablesManager,
         private val rumbleManager: RumbleManager,
     ) : ViewModelProvider.Factory {
@@ -91,6 +97,7 @@ class BaseGameScreenViewModel(
                 savesManager,
                 statesManager,
                 statesPreviewManager,
+                savesCoherencyEngine,
                 coreVariablesManager,
                 rumbleManager,
             ) as T
@@ -151,6 +158,9 @@ class BaseGameScreenViewModel(
 
     val loadingState = MutableStateFlow(false)
 
+    /** Whether the next start is the launch's own, rather than a return from the background. */
+    private var isFirstStart = true
+
     private inline fun withLoading(block: () -> Unit) {
         loadingState.value = true
         block()
@@ -177,6 +187,7 @@ class BaseGameScreenViewModel(
         lifecycle: LifecycleOwner,
     ): GLRetroView {
         val (gameData, result) = retroGameView.createRetroView(context, lifecycle)
+        saves.onSaveRAMLoaded(gameData.saveRAMData)
         viewModelScope.launch {
             gameData.quickSaveData?.let {
                 saves.restoreAutoSaveAsync(it)
@@ -307,11 +318,32 @@ class BaseGameScreenViewModel(
         }
     }
 
+    /**
+     * Persists the session as the game is put into the background.
+     *
+     * The emulator is read here and now, on the caller's thread, because it is being torn down
+     * alongside the activity and there is no getting it back once it has gone. Only the write is
+     * handed off, which no longer depends on anything but the bytes already in hand.
+     */
     fun requestBackgroundSave() {
-        if (loadingState.value) return
+        if (loadingState.value) {
+            Timber.w("Skipping the background save: a state operation is still in flight")
+            return
+        }
+
+        val startedAt = SystemClock.elapsedRealtime()
+        val snapshot = saves.captureBackgroundSaveSnapshot() ?: return
+        Timber.i("Captured the background save in %dms", SystemClock.elapsedRealtime() - startedAt)
+
         GameService.schedule {
-            val snapshot = saves.captureSaveSnapshot(false)
             saves.writeSaveSnapshot(snapshot)
+        }
+    }
+
+    suspend fun loadAutoSave() {
+        if (loadingState.value) return
+        withLoading {
+            saves.loadAutoSave()
         }
     }
 
@@ -326,6 +358,34 @@ class BaseGameScreenViewModel(
         owner.lifecycle.addObserver(inputs)
         owner.lifecycle.addObserver(retroGameView)
         owner.lifecycle.addObserver(touchControls)
+
+        viewModelScope.launch { saves.primeSettings() }
+
+        // Only while the game is actually running: the poll reaches the emulator through its own
+        // thread, which is only there to answer between frames.
+        owner.launchOnState(Lifecycle.State.RESUMED) {
+            saves.persistSaveRAMWhileRunning()
+        }
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        super.onStart(owner)
+
+        // The launch's own start is recorded by the loader, once it has read the previous session
+        // and decided whether to resume into its auto-save. This one arrives first, so recording it
+        // here would be read back as this session's own start and leave every launch discarding the
+        // auto-save it was about to resume.
+        if (isFirstStart) {
+            isFirstStart = false
+            return
+        }
+
+        // Every later start resumes play from a state written on the way out, so from this moment
+        // the auto-save is behind again and a session which fails to replace it must not be resumed
+        // into. Recording the new session is what lets the next launch tell.
+        viewModelScope.launch {
+            savesCoherencyEngine.onSessionStarted(game, systemCoreConfig.coreID)
+        }
     }
 
     fun sendKeyEvent(

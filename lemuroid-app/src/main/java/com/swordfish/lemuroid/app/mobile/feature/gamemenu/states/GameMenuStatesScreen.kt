@@ -31,18 +31,22 @@ private val PREVIEW_SIZE = 48.dp
 private const val CONTENT_FADE_DURATION = 150
 
 /**
- * There is always one row per save slot, and every row is the same height, so the screen occupies
- * the same space whether or not the slots have been read yet. That lets the sheet animate to its
- * final height as the screen slides in, instead of resizing again once the previews arrive.
+ * There is always one row per save slot, plus the auto-save where it is offered, and every row is
+ * the same height, so the screen occupies the same space whether or not the states have been read
+ * yet. That lets the sheet animate to its final height as the screen slides in, instead of resizing
+ * again once the previews arrive.
  */
-private val CONTENT_HEIGHT = STATE_ROW_HEIGHT * StatesManager.MAX_STATES
+private fun contentHeight(includeAutoSave: Boolean) =
+    STATE_ROW_HEIGHT * (StatesManager.MAX_STATES + if (includeAutoSave) 1 else 0)
 
 @Composable
 fun GameMenuStatesScreen(
     viewModel: GameMenuStatesViewModel,
-    onStateClicked: (Int) -> Unit,
+    includeAutoSave: Boolean,
+    onStateClicked: (GameMenuStatesViewModel.StateEntry) -> Unit,
 ) {
     val state by viewModel.uiStates.collectAsState(initial = null)
+    val contentHeight = contentHeight(includeAutoSave)
 
     Column(
         modifier =
@@ -59,13 +63,13 @@ fun GameMenuStatesScreen(
         ) { entries ->
             if (entries == null) {
                 LemuroidDelayedLoading(
-                    modifier = Modifier.fillMaxWidth().height(CONTENT_HEIGHT),
+                    modifier = Modifier.fillMaxWidth().height(contentHeight),
                 )
             } else {
                 // A minimum rather than a fixed height, so a row that needs more room for its text
                 // grows instead of clipping it. At normal font scales it never has to.
-                Column(modifier = Modifier.fillMaxWidth().heightIn(min = CONTENT_HEIGHT)) {
-                    entries.forEachIndexed { index, entry ->
+                Column(modifier = Modifier.fillMaxWidth().heightIn(min = contentHeight)) {
+                    entries.forEach { entry ->
                         LemuroidSettingsMenuLink(
                             modifier = Modifier.heightIn(min = STATE_ROW_HEIGHT),
                             title = { Text(text = entry.title) },
@@ -81,7 +85,7 @@ fun GameMenuStatesScreen(
                                     )
                                 }
                             },
-                            onClick = { onStateClicked(index) },
+                            onClick = { onStateClicked(entry) },
                         )
                     }
                 }

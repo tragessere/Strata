@@ -17,6 +17,7 @@ object GameMenuContract {
     const val RESULT_RESET = "RESULT_RESET"
     const val RESULT_SAVE = "RESULT_SAVE"
     const val RESULT_LOAD = "RESULT_LOAD"
+    const val RESULT_LOAD_AUTO_SAVE = "RESULT_LOAD_AUTO_SAVE"
     const val RESULT_QUIT = "RESULT_QUIT"
     const val RESULT_CHANGE_DISK = "RESULT_CHANGE_DISK"
     const val RESULT_EDIT_TOUCH_CONTROLS = "RESULT_EDIT_TOUCH_CONTROLS"

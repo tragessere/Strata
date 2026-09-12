@@ -60,6 +60,7 @@ import com.swordfish.lemuroid.lib.library.skin.ControllerSkinPreferences
 import com.swordfish.lemuroid.lib.library.skin.DeltaSkinManager
 import com.swordfish.lemuroid.lib.migration.DesmumeMigrationHandler
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
+import com.swordfish.lemuroid.lib.saves.GameSessionStore
 import com.swordfish.lemuroid.lib.saves.SaveImporter
 import com.swordfish.lemuroid.lib.saves.SavesCoherencyEngine
 import com.swordfish.lemuroid.lib.saves.SavesManager
@@ -339,7 +340,17 @@ abstract class LemuroidApplicationModule {
             savesManager: SavesManager,
             statesManager: StatesManager,
             syncInstalledSaves: SyncInstalledSavesStore,
-        ) = SavesCoherencyEngine(savesManager, statesManager, syncInstalledSaves)
+            gameSessionStore: GameSessionStore,
+        ) = SavesCoherencyEngine(savesManager, statesManager, syncInstalledSaves, gameSessionStore)
+
+        /**
+         * Written and read by the game process only, and kept in the internal files directory so
+         * that the save sync never carries it off.
+         */
+        @Provides
+        @PerApp
+        fun gameSessionStore(context: Context) =
+            GameSessionStore(File(context.filesDir, GameSessionStore.SESSION_FILE_NAME))
 
         /**
          * Shared by the sync and the save import which write it and the game launch which reads it.
